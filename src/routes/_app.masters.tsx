@@ -186,5 +186,4 @@ function Stat({
     </div>
   );
 }
-// keep useQueries import satisfied by referencing it (tree-shake if unused)
-void useQueries;
+
