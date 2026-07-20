@@ -5,6 +5,13 @@ import {
   type LiveAccountState,
   type SubscriptionRow,
 } from "./supabase";
+import {
+  getAccountTrades,
+  getMasterTrades,
+  getMastersDirectory,
+  type Deal,
+  type DirectoryMaster,
+} from "./api";
 
 export const accountsQueryOptions = () =>
   queryOptions({
@@ -46,4 +53,31 @@ export const liveAccountStateQueryOptions = (accountIds: string[]) =>
       }
       return map;
     },
+  });
+
+export const mastersDirectoryQueryOptions = () =>
+  queryOptions({
+    queryKey: ["masters", "directory"],
+    queryFn: (): Promise<DirectoryMaster[]> => getMastersDirectory(),
+    staleTime: 60_000,
+  });
+
+export const accountTradesQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["accounts", accountId, "trades"],
+    enabled: !!accountId,
+    queryFn: (): Promise<Deal[]> => getAccountTrades(accountId as string),
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    retry: false,
+  });
+
+export const masterTradesQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["masters", accountId, "trades"],
+    enabled: !!accountId,
+    queryFn: (): Promise<Deal[]> => getMasterTrades(accountId as string),
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    retry: false,
   });
