@@ -18,6 +18,7 @@ export function AccountCard({
   const openPnl =
     balance !== null && equity !== null ? equity - balance : null;
 
+  // console.log("account car live data :", live)
   return (
     <div className="rounded-lg border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -85,7 +86,7 @@ export function AccountCard({
           </div>
           <div className="mt-1 text-sm">
             <NumericValue
-              value={live?.open_positions ?? null}
+              value={live?.open_positions?.length ?? null}
               format="number"
               decimals={0}
             />

@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_app/dashboard")({
 function Dashboard() {
   const navigate = useNavigate();
   const { data: accounts, isLoading, error } = useQuery(accountsQueryOptions());
-
+  // console.log(" account data :", accounts)
   useEffect(() => {
     if (!isLoading && accounts && accounts.length === 0) {
       navigate({ to: "/onboarding", replace: true });
@@ -22,7 +22,7 @@ function Dashboard() {
 
   const ids = (accounts ?? []).map((a) => a.account_id);
   const { data: liveMap } = useLiveAccountState(ids);
-
+  // console.log(" Live state data :", liveMap)
   if (isLoading) {
     return (
       <div className="grid h-64 place-items-center">

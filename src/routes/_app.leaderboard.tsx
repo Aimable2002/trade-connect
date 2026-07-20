@@ -51,7 +51,7 @@ function Leaderboard() {
     withData.sort((a, b) => (b.ret30 ?? 0) - (a.ret30 ?? 0));
     return [...withData, ...withoutData];
   }, [rows]);
-
+  console.log("ranked masters :", ranked)
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 md:p-8">
       <header>
