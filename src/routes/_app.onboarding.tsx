@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { provisionAccount, ProvisionError } from "@/lib/api";
+import { mastersDirectoryQueryOptions } from "@/lib/queries";
 import { ProgressStages } from "@/components/ProgressStages";
 import { SizingModeSelect } from "@/components/SizingModeSelect";
 import type { SizingMode } from "@/lib/supabase";
@@ -12,14 +13,8 @@ export const Route = createFileRoute("/_app/onboarding")({
   component: Onboarding,
 });
 
-// Sample masters — clearly placeholder until directory endpoint ships
-const SAMPLE_MASTERS = [
-  { id: "sample-master-1", name: "Northwind Systematic", risk: 4 },
-  { id: "sample-master-2", name: "Kite Momentum", risk: 6 },
-  { id: "sample-master-3", name: "Meridian Macro", risk: 3 },
-];
-
 type Step = "role" | "master-form" | "follower-form";
+
 
 function Onboarding() {
   const [step, setStep] = useState<Step>("role");
