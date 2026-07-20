@@ -65,9 +65,10 @@ function AccountTrades({ accountId }: { accountId: string }) {
   );
 
   const { trips, unpaired } = useMemo(() => {
-    if (!deals) return { trips: [], unpaired: [] as typeof deals };
+    if (!deals) return { trips: [], unpaired: [] as import("@/lib/api").Deal[] };
     return pairDeals(deals);
   }, [deals]);
+
 
   if (isLoading) return <LoadingCard />;
 
