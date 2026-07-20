@@ -197,14 +197,28 @@ function FollowerForm({
     password: "",
     server: "",
   });
-  const [masterId, setMasterId] = useState(SAMPLE_MASTERS[0].id);
+  const [masterId, setMasterId] = useState<string>("");
   const [multiplier, setMultiplier] = useState(1.0);
   const [mode, setMode] = useState<SizingMode>("fixed_multiplier");
+
+  const { data: masters, isLoading, error } = useQuery(
+    mastersDirectoryQueryOptions(),
+  );
+
+  useEffect(() => {
+    if (!masterId && masters && masters.length > 0) {
+      setMasterId(masters[0].account_id);
+    }
+  }, [masters, masterId]);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        if (!masterId) {
+          toast.error("Pick a master to copy first.");
+          return;
+        }
         onSubmit({
           ...fields,
           master_account_id: masterId,
@@ -227,29 +241,49 @@ function FollowerForm({
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
           Master to copy
         </div>
-        <div className="mt-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] text-warning">
-          Sample masters — real directory ships with the next release.
-        </div>
+        {isLoading && (
+          <div className="mt-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+            Loading directory…
+          </div>
+        )}
+        {error && (
+          <div className="mt-2 rounded-md border border-loss/30 bg-loss/5 px-3 py-2 text-[11px] text-loss">
+            Couldn't load directory: {(error as Error).message}
+          </div>
+        )}
+        {!isLoading && !error && (masters ?? []).length === 0 && (
+          <div className="mt-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+            No public masters yet. Ask a master to publish their profile.
+          </div>
+        )}
         <div className="mt-2 grid gap-2">
-          {SAMPLE_MASTERS.map((m) => (
+          {(masters ?? []).map((m) => (
             <button
-              key={m.id}
+              key={m.account_id}
               type="button"
-              onClick={() => setMasterId(m.id)}
-              className={`flex items-center justify-between rounded-md border px-3 py-2 text-left ${
-                masterId === m.id
+              onClick={() => setMasterId(m.account_id)}
+              className={`flex items-start justify-between gap-3 rounded-md border px-3 py-2 text-left ${
+                masterId === m.account_id
                   ? "border-primary bg-primary/10"
                   : "border-border bg-card hover:border-primary/40"
               }`}
             >
-              <span className="text-sm">{m.name}</span>
-              <span className="font-mono text-[10px] text-muted-foreground">
-                risk {m.risk}/10
+              <div className="min-w-0">
+                <div className="truncate text-sm">{m.display_name}</div>
+                {m.bio && (
+                  <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
+                    {m.bio}
+                  </div>
+                )}
+              </div>
+              <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                {m.account_id.slice(0, 8)}…
               </span>
             </button>
           ))}
         </div>
       </div>
+
 
       <div>
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
