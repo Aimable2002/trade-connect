@@ -7,10 +7,22 @@ import {
 } from "./supabase";
 import {
   getAccountTrades,
+  getBilling,
+  getMasterEarnings,
+  getMasterRate,
   getMasterTrades,
   getMastersDirectory,
+  getRoster,
+  getWallet,
+  getWalletTransactions,
+  type Billing,
   type Deal,
   type DirectoryMaster,
+  type MasterEarnings,
+  type MasterRate,
+  type RosterResponse,
+  type Wallet,
+  type WalletTransaction,
 } from "./api";
 
 export const accountsQueryOptions = () =>
@@ -80,4 +92,77 @@ export const masterTradesQueryOptions = (accountId: string | undefined) =>
     staleTime: 60_000,
     gcTime: 10 * 60_000,
     retry: false,
+  });
+
+export const masterRateQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["masters", accountId, "rate"],
+    enabled: !!accountId,
+    queryFn: (): Promise<MasterRate> => getMasterRate(accountId as string),
+    staleTime: 30_000,
+  });
+
+export const masterEarningsQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["masters", accountId, "earnings"],
+    enabled: !!accountId,
+    queryFn: (): Promise<MasterEarnings> =>
+      getMasterEarnings(accountId as string),
+    staleTime: 30_000,
+  });
+
+export const walletQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["accounts", accountId, "wallet"],
+    enabled: !!accountId,
+    queryFn: (): Promise<Wallet> => getWallet(accountId as string),
+    staleTime: 15_000,
+  });
+
+export const walletTxQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["accounts", accountId, "wallet", "transactions"],
+    enabled: !!accountId,
+    queryFn: (): Promise<WalletTransaction[]> =>
+      getWalletTransactions(accountId as string),
+    staleTime: 15_000,
+  });
+
+export const billingQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["accounts", accountId, "billing"],
+    enabled: !!accountId,
+    queryFn: (): Promise<Billing> => getBilling(accountId as string),
+    staleTime: 15_000,
+  });
+
+export const rosterQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["accounts", accountId, "roster"],
+    enabled: !!accountId,
+    queryFn: (): Promise<RosterResponse> => getRoster(accountId as string),
+    staleTime: 15_000,
+  });
+
+export interface Package {
+  code: string;
+  duration_days: number;
+  infra_fee: number;
+  slot_fee_per_slot: number;
+  base_roster_size: number;
+  is_active: boolean;
+}
+
+export const packagesQueryOptions = () =>
+  queryOptions({
+    queryKey: ["packages"],
+    queryFn: async (): Promise<Package[]> => {
+      const { data, error } = await supabase
+        .from("packages")
+        .select("*")
+        .eq("is_active", true);
+      if (error) throw error;
+      return (data ?? []) as Package[];
+    },
+    staleTime: 5 * 60_000,
   });

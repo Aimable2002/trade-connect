@@ -1,12 +1,18 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   accountsQueryOptions,
   mastersDirectoryQueryOptions,
   masterTradesQueryOptions,
+  subscriptionsQueryOptions,
 } from "@/lib/queries";
 import { NumericValue } from "@/components/NumericValue";
-import { computeReturnAbs, countClosed, winRate } from "@/lib/trades";
+import {
+  maxDrawdownAbs,
+  openExposure,
+  roiPct,
+  winRate,
+} from "@/lib/trades";
 import type { DirectoryMaster } from "@/lib/api";
 
 export const Route = createFileRoute("/_app/masters")({
@@ -26,8 +32,7 @@ function MastersDirectory() {
         </div>
         <h1 className="mt-1 text-2xl font-semibold">Masters</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Stats are computed live from each master's raw MT5 deals. First load
-          per master takes ~10s while the terminal pulls history.
+          Stats computed live from each master's MT5 deals. First load ~10s.
         </p>
       </header>
 
@@ -43,8 +48,7 @@ function MastersDirectory() {
       )}
       {!isLoading && !error && (masters ?? []).length === 0 && (
         <div className="rounded-lg border border-dashed border-border p-8 text-center text-xs text-muted-foreground">
-          No public masters yet. If you're a master, publish your profile from
-          Settings.
+          No public masters yet.
         </div>
       )}
 
@@ -60,6 +64,7 @@ function MastersDirectory() {
 function MasterCard({ master }: { master: DirectoryMaster }) {
   const navigate = useNavigate();
   const { data: accounts } = useQuery(accountsQueryOptions());
+  const { data: subs } = useQuery(subscriptionsQueryOptions());
   const isMine = (accounts ?? []).some(
     (a) => a.account_id === master.account_id,
   );
@@ -68,26 +73,41 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
     masterTradesQueryOptions(master.account_id),
   );
 
-  const ret30 = deals ? computeReturnAbs(deals, 30) : null;
-  const closes30 = deals ? countClosed(deals, 30) : null;
-  const wr30 = deals ? winRate(deals, 30) : null;
+  const roi = deals ? roiPct(deals) : null;
+  const dd = deals ? maxDrawdownAbs(deals) : null;
+  const exp = deals ? openExposure(deals) : null;
+  const wr = deals ? winRate(deals, 30) : null;
+  const followers = subs
+    ? subs.filter((s) => s.master_account_id === master.account_id).length
+    : null;
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold">
+          <Link
+            to="/insight/$accountId"
+            params={{ accountId: master.account_id }}
+            className="block truncate text-sm font-semibold text-primary hover:underline"
+          >
             {master.display_name}
-          </div>
+          </Link>
           <div className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">
             {master.account_id}
           </div>
         </div>
-        {isMine && (
-          <span className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary">
-            You
-          </span>
-        )}
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {master.rate_percent !== undefined && (
+            <span className="rounded border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[10px]">
+              {master.rate_percent}% rate
+            </span>
+          )}
+          {isMine && (
+            <span className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary">
+              You
+            </span>
+          )}
+        </div>
       </div>
 
       {master.bio && (
@@ -96,45 +116,55 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
         </p>
       )}
 
-      <div className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded border border-border bg-border">
+      <div className="mt-4 grid grid-cols-4 gap-px overflow-hidden rounded border border-border bg-border">
         <Stat
-          label="30d P&L"
+          label="ROI"
           loading={isLoading}
           error={!!error}
           value={
-            ret30 === null ? (
+            roi === null ? (
               "—"
             ) : (
-              <span className={ret30 >= 0 ? "text-profit" : "text-loss"}>
-                <NumericValue value={ret30} format="signed" flash={false} />
+              <span className={roi >= 0 ? "text-profit" : "text-loss"}>
+                <NumericValue value={roi} decimals={1} flash={false} />%
               </span>
             )
           }
         />
         <Stat
-          label="30d trades"
+          label="Max DD"
           loading={isLoading}
           error={!!error}
           value={
-            closes30 === null ? (
-              "—"
-            ) : (
-              <NumericValue value={closes30} decimals={0} flash={false} />
-            )
+            dd === null ? "—" : <NumericValue value={dd} flash={false} />
           }
         />
         <Stat
-          label="30d win%"
+          label="Open exp"
           loading={isLoading}
           error={!!error}
           value={
-            wr30 === null ? (
+            exp === null ? "—" : `${exp.toFixed(2)}`
+          }
+        />
+        <Stat
+          label="30d win"
+          loading={isLoading}
+          error={!!error}
+          value={
+            wr === null ? (
               "—"
             ) : (
-              <NumericValue value={wr30 * 100} decimals={0} flash={false} />
+              <>
+                <NumericValue value={wr * 100} decimals={0} flash={false} />%
+              </>
             )
           }
         />
+      </div>
+
+      <div className="mt-2 text-[10px] text-muted-foreground">
+        Followers: <span className="font-mono">{followers ?? "—"}</span>
       </div>
 
       {error && (
@@ -143,17 +173,26 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
         </div>
       )}
 
-      <button
-        onClick={() =>
-          navigate({
-            to: "/onboarding",
-            search: { master: master.account_id } as never,
-          })
-        }
-        className="mt-3 w-full rounded-md border border-primary/40 bg-primary/10 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
-      >
-        Copy this master
-      </button>
+      <div className="mt-3 flex gap-2">
+        <Link
+          to="/insight/$accountId"
+          params={{ accountId: master.account_id }}
+          className="flex-1 rounded-md border border-border py-2 text-center text-xs font-semibold hover:border-primary/60"
+        >
+          View insights
+        </Link>
+        <button
+          onClick={() =>
+            navigate({
+              to: "/onboarding",
+              search: { master: master.account_id } as never,
+            })
+          }
+          className="flex-1 rounded-md border border-primary/40 bg-primary/10 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
+        >
+          Copy master
+        </button>
+      </div>
     </div>
   );
 }
@@ -170,11 +209,11 @@ function Stat({
   error: boolean;
 }) {
   return (
-    <div className="bg-card p-3">
+    <div className="bg-card p-2">
       <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
         {label}
       </div>
-      <div className="mt-1 text-sm">
+      <div className="mt-1 text-xs">
         {loading ? (
           <span className="text-muted-foreground/60">…</span>
         ) : error ? (
@@ -186,4 +225,3 @@ function Stat({
     </div>
   );
 }
-

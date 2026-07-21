@@ -8,6 +8,7 @@ import { NumericValue } from "@/components/NumericValue";
 import { useEffect, useMemo, useState } from "react";
 import { pairDeals } from "@/lib/trades";
 import { Loader2 } from "lucide-react";
+import type { Deal } from "@/lib/api";
 
 export const Route = createFileRoute("/_app/history")({
   component: History,
@@ -32,9 +33,7 @@ function History() {
         <h1 className="mt-1 text-2xl font-semibold">Trade history</h1>
         <p className="mt-1 text-xs text-muted-foreground">
           Live pull from the MT5 terminal — the first request per account
-          takes about 10 seconds. MT5 stores each round-trip as two deals
-          (<span className="font-mono">in</span> +{" "}
-          <span className="font-mono">out</span>); we pair them below.
+          takes about 10 seconds.
         </p>
       </header>
 
@@ -65,10 +64,9 @@ function AccountTrades({ accountId }: { accountId: string }) {
   );
 
   const { trips, unpaired } = useMemo(() => {
-    if (!deals) return { trips: [], unpaired: [] as import("@/lib/api").Deal[] };
+    if (!deals) return { trips: [], unpaired: [] as Deal[] };
     return pairDeals(deals);
   }, [deals]);
-
 
   if (isLoading) return <LoadingCard />;
 
@@ -103,9 +101,7 @@ function AccountTrades({ accountId }: { accountId: string }) {
       <div className="flex items-center justify-between text-[11px] text-muted-foreground">
         <div>
           {trips.length} round-trip trade{trips.length === 1 ? "" : "s"}
-          {unpaired.length > 0 && (
-            <> · {unpaired.length} unpaired deal(s)</>
-          )}
+          {unpaired.length > 0 && <> · {unpaired.length} unpaired deal(s)</>}
         </div>
         <button
           onClick={() => refetch()}
@@ -117,8 +113,8 @@ function AccountTrades({ accountId }: { accountId: string }) {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full min-w-[820px] text-sm">
           <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr>
               <th className="px-3 py-2 text-left">Opened</th>
@@ -135,10 +131,10 @@ function AccountTrades({ accountId }: { accountId: string }) {
           <tbody>
             {sortedTrips.map((t) => (
               <tr key={t.key} className="border-t border-border">
-                <td className="px-3 py-2 font-mono tabular text-[11px] text-muted-foreground">
+                <td className="whitespace-nowrap px-3 py-2 font-mono tabular text-[11px] text-muted-foreground">
                   {fmt(t.openTime)}
                 </td>
-                <td className="px-3 py-2 font-mono tabular text-[11px] text-muted-foreground">
+                <td className="whitespace-nowrap px-3 py-2 font-mono tabular text-[11px] text-muted-foreground">
                   {fmt(t.closeTime)}
                 </td>
                 <td className="px-3 py-2 font-mono">{t.symbol}</td>
