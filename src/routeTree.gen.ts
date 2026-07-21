@@ -20,6 +20,7 @@ import { Route as AppLeaderboardRouteImport } from './routes/_app.leaderboard'
 import { Route as AppHistoryRouteImport } from './routes/_app.history'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppInsightAccountIdRouteImport } from './routes/_app.insight.$accountId'
+import { Route as AppAccountsAccountIdRouteImport } from './routes/_app.accounts.$accountId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -75,6 +76,11 @@ const AppInsightAccountIdRoute = AppInsightAccountIdRouteImport.update({
   path: '/insight/$accountId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAccountsAccountIdRoute = AppAccountsAccountIdRouteImport.update({
+  id: '/accounts/$accountId',
+  path: '/accounts/$accountId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AppOnboardingRoute
   '/pricing': typeof AppPricingRoute
   '/settings': typeof AppSettingsRoute
+  '/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/insight/$accountId': typeof AppInsightAccountIdRoute
 }
 export interface FileRoutesByTo {
@@ -98,6 +105,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AppOnboardingRoute
   '/pricing': typeof AppPricingRoute
   '/settings': typeof AppSettingsRoute
+  '/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/insight/$accountId': typeof AppInsightAccountIdRoute
 }
 export interface FileRoutesById {
@@ -112,6 +120,7 @@ export interface FileRoutesById {
   '/_app/onboarding': typeof AppOnboardingRoute
   '/_app/pricing': typeof AppPricingRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/_app/insight/$accountId': typeof AppInsightAccountIdRoute
 }
 export interface FileRouteTypes {
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pricing'
     | '/settings'
+    | '/accounts/$accountId'
     | '/insight/$accountId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pricing'
     | '/settings'
+    | '/accounts/$accountId'
     | '/insight/$accountId'
   id:
     | '__root__'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/_app/onboarding'
     | '/_app/pricing'
     | '/_app/settings'
+    | '/_app/accounts/$accountId'
     | '/_app/insight/$accountId'
   fileRoutesById: FileRoutesById
 }
@@ -239,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInsightAccountIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/accounts/$accountId': {
+      id: '/_app/accounts/$accountId'
+      path: '/accounts/$accountId'
+      fullPath: '/accounts/$accountId'
+      preLoaderRoute: typeof AppAccountsAccountIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -250,6 +269,7 @@ interface AppRouteChildren {
   AppOnboardingRoute: typeof AppOnboardingRoute
   AppPricingRoute: typeof AppPricingRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppAccountsAccountIdRoute: typeof AppAccountsAccountIdRoute
   AppInsightAccountIdRoute: typeof AppInsightAccountIdRoute
 }
 
@@ -261,6 +281,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppOnboardingRoute: AppOnboardingRoute,
   AppPricingRoute: AppPricingRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppAccountsAccountIdRoute: AppAccountsAccountIdRoute,
   AppInsightAccountIdRoute: AppInsightAccountIdRoute,
 }
 
