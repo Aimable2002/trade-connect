@@ -1,30 +1,23 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { z } from "zod";
-import { zodValidator } from "@tanstack/zod-adapter";
 import {
   accountsQueryOptions,
   billingQueryOptions,
   packagesQueryOptions,
   walletQueryOptions,
-} from "@/lib/queries";
-import {
-  ApiError,
-  selectPackage,
-  topupWallet,
   type Package,
-} from "@/lib/api";
+} from "@/lib/queries";
+import { ApiError, selectPackage, topupWallet } from "@/lib/api";
 import { NumericValue } from "@/components/NumericValue";
 import { toast } from "sonner";
 import { Wallet, Package as PackageIcon } from "lucide-react";
 
-const searchSchema = z.object({
-  account: z.string().optional(),
-});
-
 export const Route = createFileRoute("/_app/pricing")({
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: (search: Record<string, unknown>) => ({
+    account:
+      typeof search.account === "string" ? search.account : undefined,
+  }),
   component: Pricing,
 });
 
