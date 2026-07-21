@@ -590,36 +590,38 @@ function BillingPanel({ accountId }: { accountId: string }) {
           </Link>
         </div>
       )}
-      {data && data.status !== "none" && (
+      {data && data.status !== "none" && (() => {
+        const bp = data as Exclude<typeof data, { status: "none" }>;
+        return (
         <div className="mt-2 space-y-3">
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <Info label="Package" value={data.package_code} />
+            <Info label="Package" value={bp.package_code} />
             <Info
               label="Status"
               value={
                 <span
                   className={
-                    data.status === "active"
+                    bp.status === "active"
                       ? "text-profit"
-                      : data.status === "grace"
+                      : bp.status === "grace"
                         ? "text-warning"
                         : "text-loss"
                   }
                 >
-                  {data.status}
+                  {bp.status}
                 </span>
               }
             />
-            {data.renews_at && (
+            {bp.renews_at && (
               <Info
                 label="Renews"
-                value={new Date(data.renews_at).toLocaleString()}
+                value={new Date(bp.renews_at).toLocaleString()}
               />
             )}
-            {data.grace_started_at && (
+            {bp.grace_started_at && (
               <Info
                 label="Grace since"
-                value={new Date(data.grace_started_at).toLocaleString()}
+                value={new Date(bp.grace_started_at).toLocaleString()}
               />
             )}
           </div>
