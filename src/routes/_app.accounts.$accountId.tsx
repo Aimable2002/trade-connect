@@ -625,15 +625,15 @@ function BillingPanel({ accountId }: { accountId: string }) {
               />
             )}
           </div>
-          {data.status === "grace" && (
+          {bp.status === "grace" && (
             <div className="rounded-md border border-warning/40 bg-warning/10 p-2 text-[11px] text-warning">
               Subscription is in grace. Top up your wallet to allow renewal.
             </div>
           )}
-          {data.status === "closed" && (
+          {bp.status === "closed" && (
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => reactivate.mutate(data.package_code)}
+                onClick={() => reactivate.mutate(bp.package_code)}
                 disabled={reactivate.isPending}
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
               >
@@ -648,7 +648,8 @@ function BillingPanel({ accountId }: { accountId: string }) {
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
     </section>
   );
 }
