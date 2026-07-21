@@ -35,7 +35,6 @@ export class ProvisionError extends Error {
   }
 }
 
-// Alias so callers can use a semantically-correct name for non-provision routes.
 export const ApiError = ProvisionError;
 export type ApiError = ProvisionError;
 
@@ -174,6 +173,7 @@ export interface DirectoryMaster {
   account_id: string;
   display_name: string;
   bio?: string;
+  rate_percent?: number;
 }
 
 export const getMastersDirectory = () =>
@@ -182,6 +182,166 @@ export const getMastersDirectory = () =>
     timeoutMs: 15_000,
   });
 
+// -------- Master rate --------
+
+export interface MasterRate {
+  account_id: string;
+  rate_percent: number;
+  platform_cut_percent: number;
+  master_net_percent: number;
+}
+
+export const getMasterRate = (accountId: string) =>
+  authedFetch<MasterRate>(`/masters/${accountId}/rate`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
+export const setMasterRate = (
+  accountId: string,
+  input: { rate_percent: number; platform_cut_percent: number },
+) =>
+  authedFetch<MasterRate>(`/masters/${accountId}/rate`, {
+    method: "POST",
+    body: input,
+    timeoutMs: 15_000,
+  });
+
+// -------- Master earnings --------
+
+export interface EarningEntry {
+  amount: number;
+  created_at: string;
+  related_follower_account_id?: string;
+  related_deal_ticket?: string;
+}
+
+export interface MasterEarnings {
+  total_earned: number;
+  transaction_count: number;
+  recent: EarningEntry[];
+}
+
+export const getMasterEarnings = (accountId: string) =>
+  authedFetch<MasterEarnings>(`/masters/${accountId}/earnings`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
+// -------- Follower wallet --------
+
+export interface Wallet {
+  balance: number;
+  in_debt: boolean;
+  debt_started_at: string | null;
+  exists: boolean;
+}
+
+export type WalletTxType =
+  | "topup"
+  | "infra_fee"
+  | "slot_fee"
+  | "profit_share_platform"
+  | "profit_share_master"
+  | "debt_recovery";
+
+export interface WalletTransaction {
+  type: WalletTxType | string;
+  amount: number;
+  related_master_account_id?: string | null;
+  related_deal_ticket?: string | null;
+  created_at: string;
+}
+
+export const getWallet = (accountId: string) =>
+  authedFetch<Wallet>(`/accounts/${accountId}/wallet`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
+export const topupWallet = (accountId: string, amount: number) =>
+  authedFetch<Wallet>(`/accounts/${accountId}/wallet/topup`, {
+    method: "POST",
+    body: { amount },
+    timeoutMs: 15_000,
+  });
+
+export const getWalletTransactions = (accountId: string) =>
+  authedFetch<WalletTransaction[]>(
+    `/accounts/${accountId}/wallet/transactions`,
+    { method: "GET", timeoutMs: 15_000 },
+  );
+
+// -------- Follower billing --------
+
+export type BillingStatus = "active" | "grace" | "closed" | string;
+
+export interface BillingNone {
+  status: "none";
+}
+export interface BillingPeriod {
+  status: BillingStatus;
+  package_code: string;
+  renews_at?: string | null;
+  grace_started_at?: string | null;
+  billing_period_id?: string;
+}
+
+export type Billing = BillingNone | BillingPeriod;
+
+export const getBilling = (accountId: string) =>
+  authedFetch<Billing>(`/accounts/${accountId}/billing`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
+export const selectPackage = (accountId: string, package_code: string) =>
+  authedFetch<BillingPeriod>(
+    `/accounts/${accountId}/billing/select-package`,
+    { method: "POST", body: { package_code }, timeoutMs: 20_000 },
+  );
+
+export const reactivateBilling = (accountId: string, package_code: string) =>
+  authedFetch<BillingPeriod>(
+    `/accounts/${accountId}/billing/reactivate`,
+    { method: "POST", body: { package_code }, timeoutMs: 20_000 },
+  );
+
+// -------- Follower roster --------
+
+export interface RosterSlot {
+  master_account_id: string;
+  is_current: boolean;
+  first_used_at: string;
+  last_used_at: string;
+}
+
+export interface RosterResponse {
+  billing_period_id: string;
+  roster: RosterSlot[];
+}
+
+export interface SwitchMasterResponse {
+  charged: boolean;
+  roster_slot_id: string;
+  rate_percent: number;
+}
+
+export const getRoster = (accountId: string) =>
+  authedFetch<RosterResponse>(`/accounts/${accountId}/roster`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
+export const switchMaster = (
+  accountId: string,
+  master_account_id: string,
+) =>
+  authedFetch<SwitchMasterResponse>(
+    `/accounts/${accountId}/roster/switch`,
+    { method: "POST", body: { master_account_id }, timeoutMs: 20_000 },
+  );
+
 // -------- Trades --------
 
 export interface Deal {
@@ -189,9 +349,9 @@ export interface Deal {
   magic: number;
   symbol: string;
   lots: number;
-  type: string; // "buy" | "sell"
-  entry: string; // "in" | "out" | ...
-  deal_time: string; // "2026.07.19 03:52:57"
+  type: string;
+  entry: string;
+  deal_time: string;
   deal_price: number;
   pnl: number;
   commission: number;
@@ -199,14 +359,12 @@ export interface Deal {
   comment: string;
 }
 
-// ~10s live call to MT5
 export const getAccountTrades = (accountId: string) =>
   authedFetch<Deal[]>(`/accounts/${accountId}/trades`, {
     method: "GET",
     timeoutMs: 20_000,
   });
 
-// Same shape, but public for masters with is_public=true
 export const getMasterTrades = (accountId: string) =>
   authedFetch<Deal[]>(`/masters/${accountId}/trades`, {
     method: "GET",

@@ -1,88 +1,92 @@
+# CopyDesk — Phase 2: Wallet, billing, account details, public insight
 
-# CopyDesk — Build Plan
+## Scope
 
-A mobile-first, dark, data-dense copy-trading UI for MT5. Uses the user's existing external Supabase project (`txdcattalsgunfolplvs`) directly — not Lovable Cloud — plus a FastAPI backend at an ngrok URL for account provisioning.
+Restructure the app around one operational page per account and one public page per master. Strip Settings to user-level items only. Fix mobile tables. Enrich master cards. Add pricing/wallet onboarding.
 
-## Configuration
+## New API surface (`src/lib/api.ts`)
 
-- Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (their anon key), and `VITE_API_BASE_URL` (ngrok URL) as env vars. All three read via `import.meta.env` — nothing hardcoded, so swapping the ngrok URL later is a one-line change.
-- Instantiate a browser-only Supabase client at `src/lib/supabase.ts` using those envs, with session persistence.
-- No Lovable Cloud enable, no `_authenticated/` integration layout — this project brings its own Supabase. Route protection is a hand-written pathless layout that checks `supabase.auth.getSession()` client-side and redirects to `/auth`.
+Add typed wrappers, all using existing `authedFetch`:
 
-## Design system (src/styles.css)
+- Master: `getMasterRate`, `setMasterRate({rate_percent, platform_cut_percent})`, `getMasterEarnings`
+- Follower wallet: `getWallet`, `topupWallet({amount})`, `getWalletTransactions`
+- Follower billing: `getBilling`, `selectPackage({package_code})`, `reactivateBilling({package_code})`
+- Follower roster: `getRoster`, `switchMaster({master_account_id})`
+- Extend `DirectoryMaster` to include `rate_percent`
 
-- Dark-only theme. Near-black background (`oklch(~0.15)`), one step lighter for cards, subtle borders.
-- Accent: **cyan** (`oklch(~0.75 0.13 220)`) for interactive elements — reserved away from P&L colors.
-- Semantic tokens: `--profit` (green), `--loss` (red), `--warning` (amber), `--accent` (cyan), plus `--risk-low/mid/high` on a separate green→amber→red scale visually distinct from P&L (slightly desaturated, different hue anchors).
-- Typography: **JetBrains Mono** for all numeric values (balances, lots, prices, %), Inter for UI text. Loaded via `<link>` in `__root.tsx` head.
-- `.tabular-nums` utility applied to numeric cells so digits don't jitter as live values update.
-- `@utility flash-update` — a 400ms background pulse animation triggered on value change, subtle.
+Add query options in `src/lib/queries.ts` for each (short staleTime for wallet/billing).
 
-## Routes
+## Trade stats helper (`src/lib/trades.ts`)
 
-```
-src/routes/
-  __root.tsx                 # dark shell, fonts, meta
-  index.tsx                  # redirect: session → /dashboard, else /auth
-  auth.tsx                   # sign up / log in (Supabase Auth, email+password)
-  _app.tsx                   # pathless protected layout: session check + bottom tab nav (mobile) / side nav (desktop)
-  _app.onboarding.tsx        # role picker → master or follower flow
-  _app.dashboard.tsx         # user's own accounts, live
-  _app.masters.tsx           # master directory (placeholder data)
-  _app.leaderboard.tsx       # ranked masters + risk badges (placeholder data)
-  _app.history.tsx           # trade history per account (placeholder data)
-  _app.settings.tsx          # edit follower subscription; pause/resume/close (placeholder actions)
-```
+Extend with pure functions computed client-side from `Deal[]`:
+`equityCurve`, `maxDrawdownAbs`, `maxDrawdownPct`, `profitFactor`, `roiPct` (vs starting balance from deposit deals), `avgWin`, `avgLoss`, `returnDrawdownRatio`, `trackRecordDays`, `openExposure` (from unpaired opens), `bySymbol`, `byHourOfDay`.
 
-Post-signup: if the user has no rows in `accounts`, `_app.dashboard.tsx`'s loader redirects to `/onboarding`.
+## Pages
 
-## Data layer
+### 1. Settings (`_app.settings.tsx`) — strip
 
-- **Auth**: `supabase.auth.signUp/signInWithPassword`, single `onAuthStateChange` listener in `__root.tsx` invalidates router + query cache.
-- **Reads** (accounts, subscriptions) via `@tanstack/react-query` + Supabase client, keyed by user id.
-- **Live state** (`live_account_state`): Supabase Realtime channel subscribed per account_id. On each row update, write into React Query cache and briefly apply `flash-update` class to changed values. No polling.
-- **Provisioning** (`POST /accounts/provision`): a typed `provisionAccount()` helper that reads `VITE_API_BASE_URL`, attaches `Authorization: Bearer ${session.access_token}`, uses a 60s timeout, and shows a multi-stage progress UI ("Connecting to broker… Spinning up terminal… Syncing balance…") over ~45s — not a spinner. On non-2xx, surface `detail` verbatim.
+Keep only user-scoped: email (from session, read-only), sign out, notification prefs placeholder. Remove masters loop, subscriptions loop, account controls. No per-account content.
 
-## Onboarding flow
+### 2. NEW `_app.accounts.$accountId.tsx` — Account Details
 
-- Step 1: role select (Master / Follower) — two large cards.
-- Step 2 (Master): MT5 login / password / server → submit → progress UI → success → `/dashboard`.
-- Step 2 (Follower): MT5 login / password / server, master picker (placeholder list clearly labeled "Sample masters — real directory coming soon"), multiplier (number input), `sizing_mode` as a segmented control restricted to exactly `fixed_multiplier` | `balance_proportional` | `fixed_master_balance_percentage`. Submit → same progress UI.
+Routed via clicking a Dashboard card. Loads account via existing query, branches on `role`.
 
-## Dashboard
+**Master view** — tabs: Profile · Rate · Earnings · Trades · Danger zone
+- Profile editor (moved from Settings)
+- Rate: shows current `rate_percent` / `platform_cut_percent`, form to update, previews `master_net_percent` from response before save
+- Earnings panel: totals + recent list
+- Trades: reuse trade table (paired deals, ~10s loading)
+- Danger zone: Pause / Resume / Close (moved from Settings)
 
-- One card per row in `accounts`. Header: role badge (MASTER/FOLLOWER), status pill (live/offline/paused, color-coded), account_id truncated.
-- Body: large monospace balance + equity, delta from previous tick in green/red, open positions count. Values pulse on realtime update.
-- If both a master and follower account exist, both cards stacked (mobile) or side-by-side (≥md).
+**Follower view** — tabs: Wallet · Billing · Roster · Trades · Danger zone
+- Wallet: balance, top-up form. If `exists=false`, show CTA linking to Pricing page instead. `in_debt` shown as a distinct red badge "Wallet negative — top up".
+- Wallet transactions list (colored by sign, typed label)
+- Billing: package_code, status pill (active/grace/closed). Grace shown as distinct amber badge "Subscription in grace — awaiting renewal". "Reactivate" button when closed, with explicit note "step 1 of 2: re-provision required to trade again"
+- Roster: current + past masters, "Switch master" flow. On switch, toast reports whether `charged` was true (new slot fee) or false
+- Trades + Pause/Resume/Close same as master
 
-## Placeholder pages
+### 3. NEW `_app.insight.$accountId.tsx` — public Master Insight
 
-Each clearly banners "Preview data — live feed coming soon" so it's never mistaken for real state.
+Read-only. Fetches directory (for name/bio/rate), `getMasterRate`, `getMasterTrades`. Renders: header, rate, equity curve (simple SVG polyline), stats grid (ROI%, max DD, profit factor, win rate, avg win/loss, track record days), symbol breakdown table, trading-hours heatmap (24 bars), full trade table.
 
-- **Masters directory**: cards with display name (never raw MT5 login), 30d return, followers count, risk badge.
-- **Leaderboard**: ranked table with rank, display name, composite score, separate 1–10 risk badge on the distinct risk scale.
-- **Trade history**: per-account table of copied trades — opened at, symbol, side (buy/sell colored), lots, status, P&L (colored when closed).
-- **Settings**: editable multiplier + sizing_mode segmented control for each follower subscription; Pause/Resume/Close buttons rendered but disabled with a "coming soon" tooltip.
+### 4. NEW `_app.pricing.tsx` — Pricing / wallet onboarding
 
-## Mobile-first specifics
+- Fetches `packages` table directly via supabase client, filter `is_active=true`
+- Requires an account context via search param `?account=<id>` (follower). If missing, prompt to pick a follower account
+- Grid of package cards: code, duration, infra_fee, slot_fee_per_slot, base_roster_size
+- Top-up input + button → `topupWallet`
+- "Select package" → `selectPackage`
 
-- Base layout targets 375px width; bottom tab bar (Dashboard, Masters, Leaderboard, History, Settings) on mobile, promoted to a left rail at `md:`.
-- Numeric cells use `tabular-nums` and truncate account ids with a copy button.
-- Tap targets ≥44px; forms use `inputMode="numeric"` where appropriate.
+### 5. Leaderboard fix (`_app.leaderboard.tsx`)
 
-## Technical details
+- Remove mobile card fallback. Single `<table>` inside `<div className="overflow-x-auto">`
+- Columns: Rank, Master (name + rate_percent from directory), 30d ROI%, 30d P&L abs, Max DD, Profit Factor, Return/DD, Avg Win, Avg Loss, Win%, Trades, Track record, Followers*
+- *Follower count derived client-side from user's `subscriptions` query where possible; if backend doesn't expose it globally, show em-dash rather than fake it
 
-- **Stack**: TanStack Start (existing), TanStack Query for server state, Supabase JS client for both auth and Realtime, Zod for form validation.
-- **Files added**:
-  - `src/lib/supabase.ts` — client factory
-  - `src/lib/api.ts` — `provisionAccount()` + typed error handling
-  - `src/lib/queries.ts` — query options for accounts/subscriptions
-  - `src/hooks/useLiveAccountState.ts` — Realtime subscription + flash trigger
-  - `src/components/` — `AccountCard`, `NumericValue` (handles flash + monospace), `StatusPill`, `RiskBadge`, `ProgressStages`, `RoleBadge`, `SizingModeSelect`
-  - route files listed above
-- **No server functions**: all data access is browser-side against the user's Supabase and the ngrok backend. No `createServerFn`, no `requireSupabaseAuth`, no `client.server.ts`.
-- **Env vars set via secrets tool** in build mode before first run so the app doesn't crash on missing config.
+### 6. History fix (`_app.history.tsx`)
 
-## Out of scope (per spec)
+Wrap table in `overflow-x-auto`. No card fallback. Add `min-w-[720px]` on the table.
 
-Real endpoints for master directory, leaderboard, trade history, and pause/resume/close — placeholder UI only, wired to mock data with clear labeling.
+### 7. Master cards enrichment
+
+`_app.masters.tsx` MasterCard: add ROI%, Max DD, current open exposure, follower count, rate_percent. Link "View" → `/insight/$accountId`, keep "Copy" → onboarding.
+
+### 8. Dashboard (`_app.dashboard.tsx`)
+
+- `AccountCard` becomes clickable → `/accounts/$accountId`
+- For followers, per-card badge row: wallet-negative badge (red) if `in_debt`, subscription-grace badge (amber) if billing status=grace, closed badge if closed. Two states, two badges — never merged.
+- Requires per-account wallet+billing fetches; batch with `useQueries` keyed on follower accounts only.
+
+## Technical notes
+
+- New routes use `createFileRoute` with dot-nested paths: `_app.accounts.$accountId.tsx`, `_app.insight.$accountId.tsx`, `_app.pricing.tsx`
+- Insight page still lives under `_app` (auth-gated) since backend requires bearer; if the intent is truly-public unauthenticated, that's a backend change out of scope — keeping under `_app` matches existing auth model
+- All new queries use `useQuery` (not loader) since these are protected server functions and the `_app` layout already gates auth
+- Equity curve = simple inline SVG polyline, no chart lib
+- Package pricing: direct `supabase.from('packages').select('*').eq('is_active', true)`
+
+## Out of scope
+
+- Notification preferences persistence (placeholder UI only)
+- Re-provision flow after closure (backend TBD)
+- Charting library — stick with SVG

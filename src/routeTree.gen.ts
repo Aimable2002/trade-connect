@@ -13,11 +13,14 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppPricingRouteImport } from './routes/_app.pricing'
 import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppMastersRouteImport } from './routes/_app.masters'
 import { Route as AppLeaderboardRouteImport } from './routes/_app.leaderboard'
 import { Route as AppHistoryRouteImport } from './routes/_app.history'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppInsightAccountIdRouteImport } from './routes/_app.insight.$accountId'
+import { Route as AppAccountsAccountIdRouteImport } from './routes/_app.accounts.$accountId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -36,6 +39,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPricingRoute = AppPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOnboardingRoute = AppOnboardingRouteImport.update({
@@ -63,6 +71,16 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppInsightAccountIdRoute = AppInsightAccountIdRouteImport.update({
+  id: '/insight/$accountId',
+  path: '/insight/$accountId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccountsAccountIdRoute = AppAccountsAccountIdRouteImport.update({
+  id: '/accounts/$accountId',
+  path: '/accounts/$accountId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -72,7 +90,10 @@ export interface FileRoutesByFullPath {
   '/leaderboard': typeof AppLeaderboardRoute
   '/masters': typeof AppMastersRoute
   '/onboarding': typeof AppOnboardingRoute
+  '/pricing': typeof AppPricingRoute
   '/settings': typeof AppSettingsRoute
+  '/accounts/$accountId': typeof AppAccountsAccountIdRoute
+  '/insight/$accountId': typeof AppInsightAccountIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,7 +103,10 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof AppLeaderboardRoute
   '/masters': typeof AppMastersRoute
   '/onboarding': typeof AppOnboardingRoute
+  '/pricing': typeof AppPricingRoute
   '/settings': typeof AppSettingsRoute
+  '/accounts/$accountId': typeof AppAccountsAccountIdRoute
+  '/insight/$accountId': typeof AppInsightAccountIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,7 +118,10 @@ export interface FileRoutesById {
   '/_app/leaderboard': typeof AppLeaderboardRoute
   '/_app/masters': typeof AppMastersRoute
   '/_app/onboarding': typeof AppOnboardingRoute
+  '/_app/pricing': typeof AppPricingRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/accounts/$accountId': typeof AppAccountsAccountIdRoute
+  '/_app/insight/$accountId': typeof AppInsightAccountIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,7 +133,10 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/masters'
     | '/onboarding'
+    | '/pricing'
     | '/settings'
+    | '/accounts/$accountId'
+    | '/insight/$accountId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -116,7 +146,10 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/masters'
     | '/onboarding'
+    | '/pricing'
     | '/settings'
+    | '/accounts/$accountId'
+    | '/insight/$accountId'
   id:
     | '__root__'
     | '/'
@@ -127,7 +160,10 @@ export interface FileRouteTypes {
     | '/_app/leaderboard'
     | '/_app/masters'
     | '/_app/onboarding'
+    | '/_app/pricing'
     | '/_app/settings'
+    | '/_app/accounts/$accountId'
+    | '/_app/insight/$accountId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -166,6 +202,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/pricing': {
+      id: '/_app/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof AppPricingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/onboarding': {
       id: '/_app/onboarding'
       path: '/onboarding'
@@ -201,6 +244,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/insight/$accountId': {
+      id: '/_app/insight/$accountId'
+      path: '/insight/$accountId'
+      fullPath: '/insight/$accountId'
+      preLoaderRoute: typeof AppInsightAccountIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/accounts/$accountId': {
+      id: '/_app/accounts/$accountId'
+      path: '/accounts/$accountId'
+      fullPath: '/accounts/$accountId'
+      preLoaderRoute: typeof AppAccountsAccountIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -210,7 +267,10 @@ interface AppRouteChildren {
   AppLeaderboardRoute: typeof AppLeaderboardRoute
   AppMastersRoute: typeof AppMastersRoute
   AppOnboardingRoute: typeof AppOnboardingRoute
+  AppPricingRoute: typeof AppPricingRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppAccountsAccountIdRoute: typeof AppAccountsAccountIdRoute
+  AppInsightAccountIdRoute: typeof AppInsightAccountIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -219,7 +279,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppLeaderboardRoute: AppLeaderboardRoute,
   AppMastersRoute: AppMastersRoute,
   AppOnboardingRoute: AppOnboardingRoute,
+  AppPricingRoute: AppPricingRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppAccountsAccountIdRoute: AppAccountsAccountIdRoute,
+  AppInsightAccountIdRoute: AppInsightAccountIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -232,13 +295,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
