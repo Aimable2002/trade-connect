@@ -20,6 +20,7 @@ import {
 } from "@/lib/trades";
 import type { Deal } from "@/lib/api";
 import { useMemo } from "react";
+import { PatientLoader, ErrorState } from "@/components/DataState";
 
 export const Route = createFileRoute("/_app/leaderboard")({
   component: Leaderboard,
@@ -45,9 +46,12 @@ interface Row {
 }
 
 function Leaderboard() {
-  const { data: masters, isLoading: dirLoading, error: dirError } = useQuery(
-    mastersDirectoryQueryOptions(),
-  );
+  const {
+    data: masters,
+    isLoading: dirLoading,
+    error: dirError,
+    refetch: refetchDir,
+  } = useQuery(mastersDirectoryQueryOptions());
   const { data: subs } = useQuery(subscriptionsQueryOptions());
 
   const tradeResults = useQueries({
@@ -92,25 +96,20 @@ function Leaderboard() {
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-8">
       <header>
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Ranked
-        </div>
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Ranked</div>
         <h1 className="mt-1 text-2xl font-semibold">Leaderboard</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Ranked by all-time ROI computed client-side from raw MT5 deals.
-          First load per master takes ~10s. Scroll horizontally on mobile.
+          Ranked by all-time ROI computed client-side from raw MT5 deals. First load per master
+          takes ~10s. Scroll horizontally on mobile.
         </p>
       </header>
 
-      {dirLoading && (
-        <div className="rounded-lg border border-border bg-card p-6 text-center text-xs text-muted-foreground">
-          Loading directory…
-        </div>
-      )}
+      {dirLoading && <PatientLoader label="Loading directory…" />}
       {dirError && (
-        <div className="rounded-lg border border-loss/30 bg-loss/5 p-4 text-xs text-loss">
-          Couldn't load directory: {(dirError as Error).message}
-        </div>
+        <ErrorState
+          message={`Couldn't load directory: ${(dirError as Error).message}`}
+          onRetry={() => refetchDir()}
+        />
       )}
       {!dirLoading && !dirError && ranked.length === 0 && (
         <div className="rounded-lg border border-dashed border-border p-8 text-center text-xs text-muted-foreground">
@@ -177,25 +176,13 @@ function Leaderboard() {
                     )}
                   </Cell>
                   <Cell row={r}>
-                    {r.dd === null ? (
-                      "—"
-                    ) : (
-                      <NumericValue value={r.dd} flash={false} />
-                    )}
+                    {r.dd === null ? "—" : <NumericValue value={r.dd} flash={false} />}
                   </Cell>
                   <Cell row={r}>
-                    {r.pf === null
-                      ? "—"
-                      : r.pf === Infinity
-                        ? "∞"
-                        : r.pf.toFixed(2)}
+                    {r.pf === null ? "—" : r.pf === Infinity ? "∞" : r.pf.toFixed(2)}
                   </Cell>
                   <Cell row={r}>
-                    {r.rdd === null
-                      ? "—"
-                      : r.rdd === Infinity
-                        ? "∞"
-                        : r.rdd.toFixed(2)}
+                    {r.rdd === null ? "—" : r.rdd === Infinity ? "∞" : r.rdd.toFixed(2)}
                   </Cell>
                   <Cell row={r}>
                     {r.aw === null ? "—" : <NumericValue value={r.aw} flash={false} />}
@@ -219,9 +206,7 @@ function Leaderboard() {
                       <NumericValue value={r.closes30} decimals={0} flash={false} />
                     )}
                   </Cell>
-                  <Cell row={r}>
-                    {r.track === null ? "—" : `${r.track}d`}
-                  </Cell>
+                  <Cell row={r}>{r.track === null ? "—" : `${r.track}d`}</Cell>
                   <Num>{r.followers ?? "—"}</Num>
                 </tr>
               ))}
@@ -248,9 +233,6 @@ function Cell({ row, children }: { row: Row; children: React.ReactNode }) {
 }
 
 function Num({ children }: { children: React.ReactNode }) {
-  return (
-    <td className="whitespace-nowrap px-3 py-3 text-right font-mono tabular">
-      {children}
-    </td>
-  );
+  return <td className="whitespace-nowrap px-3 py-3 text-right font-mono tabular">{children}</td>;
 }
+

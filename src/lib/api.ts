@@ -29,7 +29,10 @@ export interface ProvisionResponse {
 }
 
 export class ProvisionError extends Error {
-  constructor(message: string, public status?: number) {
+  constructor(
+    message: string,
+    public status?: number,
+  ) {
     super(message);
     this.name = "ProvisionError";
   }
@@ -44,16 +47,25 @@ interface RequestOpts {
   timeoutMs?: number;
 }
 
+// Hard ceiling for every request in the app. Nothing should ever abort
+// before this — slow backend/MT5 round-trips are normal, not errors.
+// Call sites may still pass a smaller "expected" timeoutMs purely for UI
+// messaging purposes, but it is clamped up to this floor so a fetch is
+// never cut short just because it's taking longer than usual.
+export const MAX_REQUEST_TIMEOUT_MS = 5 * 60_000; // 5 minutes
+
 async function authedFetch<T>(path: string, opts: RequestOpts = {}): Promise<T> {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) throw new ProvisionError("You must be signed in.", 401);
 
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    opts.timeoutMs ?? 30_000,
+  const effectiveTimeout = Math.max(
+    opts.timeoutMs ?? MAX_REQUEST_TIMEOUT_MS,
+    MAX_REQUEST_TIMEOUT_MS,
   );
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), effectiveTimeout);
 
   let res: Response;
   try {
@@ -71,12 +83,10 @@ async function authedFetch<T>(path: string, opts: RequestOpts = {}): Promise<T> 
     clearTimeout(timeout);
     if ((e as Error).name === "AbortError") {
       throw new ProvisionError(
-        "Request timed out. The MT5 terminal may still be responding — try again in a moment.",
+        "Still no response after 5 minutes. The server may be under heavy load — please refresh the page and try again.",
       );
     }
-    throw new ProvisionError(
-      `Could not reach server: ${(e as Error).message}`,
-    );
+    throw new ProvisionError(`Could not reach server: ${(e as Error).message}`);
   }
   clearTimeout(timeout);
 
@@ -101,9 +111,7 @@ async function authedFetch<T>(path: string, opts: RequestOpts = {}): Promise<T> 
   return body as T;
 }
 
-export async function provisionAccount(
-  input: ProvisionInput,
-): Promise<ProvisionResponse> {
+export async function provisionAccount(input: ProvisionInput): Promise<ProvisionResponse> {
   return authedFetch<ProvisionResponse>("/accounts/provision", {
     method: "POST",
     body: input,
@@ -159,10 +167,7 @@ export interface MasterProfile {
   is_public: boolean;
 }
 
-export const upsertMasterProfile = (
-  accountId: string,
-  input: MasterProfileInput,
-) =>
+export const upsertMasterProfile = (accountId: string, input: MasterProfileInput) =>
   authedFetch<MasterProfile>(`/masters/${accountId}/profile`, {
     method: "POST",
     body: input,
@@ -183,6 +188,13 @@ export const getMastersDirectory = () =>
   });
 
 // -------- Master rate --------
+
+// The platform's cut is not something a master sets — it is a fixed 10% of
+// whatever cut rate the master chooses to charge followers. A master who
+// charges a 20% performance fee keeps 90% of that (18%), and the platform
+// takes 10% of that fee (2%). This constant exists purely so the frontend
+// can preview the split before saving; the backend is the source of truth.
+export const PLATFORM_FEE_OF_MASTER_CUT_PCT = 10;
 
 export interface MasterRate {
   account_id: string;
@@ -267,10 +279,10 @@ export const topupWallet = (accountId: string, amount: number) =>
   });
 
 export const getWalletTransactions = (accountId: string) =>
-  authedFetch<WalletTransaction[]>(
-    `/accounts/${accountId}/wallet/transactions`,
-    { method: "GET", timeoutMs: 15_000 },
-  );
+  authedFetch<WalletTransaction[]>(`/accounts/${accountId}/wallet/transactions`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
 
 // -------- Follower billing --------
 
@@ -296,16 +308,18 @@ export const getBilling = (accountId: string) =>
   });
 
 export const selectPackage = (accountId: string, package_code: string) =>
-  authedFetch<BillingPeriod>(
-    `/accounts/${accountId}/billing/select-package`,
-    { method: "POST", body: { package_code }, timeoutMs: 20_000 },
-  );
+  authedFetch<BillingPeriod>(`/accounts/${accountId}/billing/select-package`, {
+    method: "POST",
+    body: { package_code },
+    timeoutMs: 20_000,
+  });
 
 export const reactivateBilling = (accountId: string, package_code: string) =>
-  authedFetch<BillingPeriod>(
-    `/accounts/${accountId}/billing/reactivate`,
-    { method: "POST", body: { package_code }, timeoutMs: 20_000 },
-  );
+  authedFetch<BillingPeriod>(`/accounts/${accountId}/billing/reactivate`, {
+    method: "POST",
+    body: { package_code },
+    timeoutMs: 20_000,
+  });
 
 // -------- Follower roster --------
 
@@ -333,14 +347,12 @@ export const getRoster = (accountId: string) =>
     timeoutMs: 15_000,
   });
 
-export const switchMaster = (
-  accountId: string,
-  master_account_id: string,
-) =>
-  authedFetch<SwitchMasterResponse>(
-    `/accounts/${accountId}/roster/switch`,
-    { method: "POST", body: { master_account_id }, timeoutMs: 20_000 },
-  );
+export const switchMaster = (accountId: string, master_account_id: string) =>
+  authedFetch<SwitchMasterResponse>(`/accounts/${accountId}/roster/switch`, {
+    method: "POST",
+    body: { master_account_id },
+    timeoutMs: 20_000,
+  });
 
 // -------- Trades --------
 

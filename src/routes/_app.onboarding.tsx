@@ -8,16 +8,20 @@ import { SizingModeSelect } from "@/components/SizingModeSelect";
 import type { SizingMode } from "@/lib/supabase";
 import { toast } from "sonner";
 import { ArrowLeft, Crown, Users } from "lucide-react";
+import { PatientLoader, ErrorState } from "@/components/DataState";
 
 export const Route = createFileRoute("/_app/onboarding")({
+  validateSearch: (search: Record<string, unknown>): { master?: string } => ({
+    master: typeof search.master === "string" ? search.master : undefined,
+  }),
   component: Onboarding,
 });
 
 type Step = "role" | "master-form" | "follower-form";
 
-
 function Onboarding() {
-  const [step, setStep] = useState<Step>("role");
+  const { master: preselectedMaster } = Route.useSearch();
+  const [step, setStep] = useState<Step>(preselectedMaster ? "follower-form" : "role");
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -30,8 +34,7 @@ function Onboarding() {
       navigate({ to: "/dashboard", replace: true });
     },
     onError: (err) => {
-      const msg =
-        err instanceof ProvisionError ? err.message : (err as Error).message;
+      const msg = err instanceof ProvisionError ? err.message : (err as Error).message;
       toast.error(msg, { duration: 10000 });
     },
   });
@@ -94,6 +97,7 @@ function Onboarding() {
         <MasterForm onSubmit={(v) => mutation.mutate({ role: "master", ...v })} />
       ) : (
         <FollowerForm
+          initialMasterId={preselectedMaster}
           onSubmit={(v) => mutation.mutate({ role: "follower", ...v })}
         />
       )}
@@ -107,13 +111,7 @@ interface MT5Fields {
   server: string;
 }
 
-function MT5Inputs({
-  value,
-  onChange,
-}: {
-  value: MT5Fields;
-  onChange: (v: MT5Fields) => void;
-}) {
+function MT5Inputs({ value, onChange }: { value: MT5Fields; onChange: (v: MT5Fields) => void }) {
   return (
     <div className="grid gap-3">
       <label className="block">
@@ -142,9 +140,7 @@ function MT5Inputs({
         />
       </label>
       <label className="block">
-        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Server
-        </span>
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Server</span>
         <input
           required
           value={value.server}
@@ -157,11 +153,7 @@ function MT5Inputs({
   );
 }
 
-function MasterForm({
-  onSubmit,
-}: {
-  onSubmit: (v: MT5Fields) => void;
-}) {
+function MasterForm({ onSubmit }: { onSubmit: (v: MT5Fields) => void }) {
   const [fields, setFields] = useState<MT5Fields>({
     login: "",
     password: "",
@@ -183,6 +175,7 @@ function MasterForm({
 
 function FollowerForm({
   onSubmit,
+  initialMasterId,
 }: {
   onSubmit: (
     v: MT5Fields & {
@@ -191,25 +184,27 @@ function FollowerForm({
       sizing_mode: SizingMode;
     },
   ) => void;
+  initialMasterId?: string;
 }) {
   const [fields, setFields] = useState<MT5Fields>({
     login: "",
     password: "",
     server: "",
   });
-  const [masterId, setMasterId] = useState<string>("");
+  const [masterId, setMasterId] = useState<string>(initialMasterId ?? "");
   const [multiplier, setMultiplier] = useState(1.0);
   const [mode, setMode] = useState<SizingMode>("fixed_multiplier");
 
-  const { data: masters, isLoading, error } = useQuery(
-    mastersDirectoryQueryOptions(),
-  );
+  const { data: masters, isLoading, error } = useQuery(mastersDirectoryQueryOptions());
 
   useEffect(() => {
     if (!masterId && masters && masters.length > 0) {
       setMasterId(masters[0].account_id);
     }
   }, [masters, masterId]);
+
+  const preselected = !!initialMasterId;
+  const preselectedMaster = (masters ?? []).find((m) => m.account_id === initialMasterId);
 
   return (
     <form
@@ -237,19 +232,23 @@ function FollowerForm({
         </div>
       </div>
 
+      {preselected && preselectedMaster && (
+        <div className="rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs text-primary">
+          Copying <span className="font-semibold">{preselectedMaster.display_name}</span> — you can
+          pick a different master below anytime.
+        </div>
+      )}
+
       <div>
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
           Master to copy
         </div>
-        {isLoading && (
-          <div className="mt-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
-            Loading directory…
-          </div>
-        )}
+        {isLoading && <PatientLoader label="Loading directory…" compact className="mt-2" />}
         {error && (
-          <div className="mt-2 rounded-md border border-loss/30 bg-loss/5 px-3 py-2 text-[11px] text-loss">
-            Couldn't load directory: {(error as Error).message}
-          </div>
+          <ErrorState
+            className="mt-2"
+            message={`Couldn't load directory: ${(error as Error).message}`}
+          />
         )}
         {!isLoading && !error && (masters ?? []).length === 0 && (
           <div className="mt-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
@@ -284,7 +283,6 @@ function FollowerForm({
         </div>
       </div>
 
-
       <div>
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
           Sizing mode
@@ -318,8 +316,9 @@ function SubmitBar({ label }: { label: string }) {
   return (
     <div className="space-y-3">
       <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
-        Provisioning can take up to <span className="font-mono">60s</span>.
-        Don't close the tab.
+        Provisioning usually takes <span className="font-mono">30–60s</span>, but can occasionally
+        take a few minutes if the broker server is slow. We'll keep waiting for up to 5 minutes —
+        don't close the tab or resubmit.
       </div>
       <button
         type="submit"

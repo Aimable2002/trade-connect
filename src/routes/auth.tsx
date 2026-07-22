@@ -5,12 +5,18 @@ import { Activity } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (search: Record<string, unknown>): { mode?: "signup" } => ({
+    mode: search.mode === "signup" ? "signup" : undefined,
+  }),
   component: AuthPage,
 });
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const { mode: initialMode } = Route.useSearch();
+  const [mode, setMode] = useState<"signin" | "signup">(
+    initialMode === "signup" ? "signup" : "signin",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -66,18 +72,15 @@ function AuthPage() {
       <div className="hidden flex-col justify-between border-r border-border bg-card p-10 md:flex">
         <div className="flex items-center gap-2">
           <Activity className="h-5 w-5 text-primary" />
-          <span className="font-mono text-sm font-bold tracking-widest">
-            COPYDESK
-          </span>
+          <span className="font-mono text-sm font-bold tracking-widest">COPYDESK</span>
         </div>
         <div className="space-y-4">
           <h1 className="max-w-md text-3xl font-semibold leading-tight">
             A precision terminal for copy-trading MetaTrader 5.
           </h1>
           <p className="max-w-md text-sm text-muted-foreground">
-            Route trades from vetted masters into your own broker account in
-            real time. Full transparency on balance, equity, and open positions
-            — updated live, never polled.
+            Route trades from vetted masters into your own broker account in real time. Full
+            transparency on balance, equity, and open positions — updated live, never polled.
           </p>
           <div className="grid max-w-md grid-cols-3 gap-px overflow-hidden rounded border border-border bg-border">
             {[
@@ -89,9 +92,7 @@ function AuthPage() {
                 <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
                   {s.k}
                 </div>
-                <div className="mt-1 font-mono text-sm font-semibold">
-                  {s.v}
-                </div>
+                <div className="mt-1 font-mono text-sm font-semibold">{s.v}</div>
               </div>
             ))}
           </div>
@@ -105,9 +106,7 @@ function AuthPage() {
         <form onSubmit={submit} className="w-full max-w-sm space-y-5">
           <div className="flex items-center gap-2 md:hidden">
             <Activity className="h-5 w-5 text-primary" />
-            <span className="font-mono text-sm font-bold tracking-widest">
-              COPYDESK
-            </span>
+            <span className="font-mono text-sm font-bold tracking-widest">COPYDESK</span>
           </div>
           <div>
             <h2 className="text-xl font-semibold">
@@ -142,9 +141,7 @@ function AuthPage() {
                 type="password"
                 required
                 minLength={6}
-                autoComplete={
-                  mode === "signin" ? "current-password" : "new-password"
-                }
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full rounded-md border border-border bg-input px-3 py-2 font-mono text-sm outline-none focus:border-primary"
@@ -157,11 +154,7 @@ function AuthPage() {
             disabled={loading}
             className="w-full rounded-md bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {loading
-              ? "Working…"
-              : mode === "signin"
-                ? "Sign in"
-                : "Create account"}
+            {loading ? "Working…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>
 
           <button

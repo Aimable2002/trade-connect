@@ -37,6 +37,9 @@ export function ProgressStages({ active }: { active: boolean }) {
     return () => clearInterval(timer);
   }, [active]);
 
+  const totalTypicalMs = STAGES.reduce((acc, s) => acc + s.ms, 0);
+  const isSlow = elapsed > totalTypicalMs;
+
   return (
     <div className="space-y-3 rounded-lg border border-border bg-card p-4">
       <div className="flex items-center justify-between">
@@ -46,9 +49,15 @@ export function ProgressStages({ active }: { active: boolean }) {
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Provisioning a live MT5 connection typically takes 30–60 seconds. Keep
-        this tab open.
+        Provisioning a live MT5 connection typically takes 30–60 seconds. Keep this tab open.
       </p>
+      {isSlow && (
+        <p className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] leading-relaxed text-warning">
+          Still working — this one's taking longer than usual. Broker or terminal availability can
+          add a couple of minutes. We'll keep waiting for up to 5 minutes; there's no need to
+          resubmit or close the tab.
+        </p>
+      )}
       <ul className="space-y-2 pt-1">
         {STAGES.map((s, i) => {
           const done = i < step;

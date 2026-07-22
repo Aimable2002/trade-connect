@@ -1,14 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  accountTradesQueryOptions,
-  accountsQueryOptions,
-} from "@/lib/queries";
+import { accountTradesQueryOptions, accountsQueryOptions } from "@/lib/queries";
 import { NumericValue } from "@/components/NumericValue";
 import { useEffect, useMemo, useState } from "react";
 import { pairDeals } from "@/lib/trades";
 import { Loader2 } from "lucide-react";
 import type { Deal } from "@/lib/api";
+import { PatientLoader, ErrorState } from "@/components/DataState";
 
 export const Route = createFileRoute("/_app/history")({
   component: History,
@@ -27,13 +25,10 @@ function History() {
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 md:p-8">
       <header>
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Log
-        </div>
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Log</div>
         <h1 className="mt-1 text-2xl font-semibold">Trade history</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Live pull from the MT5 terminal — the first request per account
-          takes about 10 seconds.
+          Live pull from the MT5 terminal — the first request per account takes about 10 seconds.
         </p>
       </header>
 
@@ -59,28 +54,34 @@ function History() {
 }
 
 function AccountTrades({ accountId }: { accountId: string }) {
-  const { data: deals, isLoading, isFetching, error, refetch } = useQuery(
-    accountTradesQueryOptions(accountId),
-  );
+  const {
+    data: deals,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery(accountTradesQueryOptions(accountId));
 
   const { trips, unpaired } = useMemo(() => {
     if (!deals) return { trips: [], unpaired: [] as Deal[] };
     return pairDeals(deals);
   }, [deals]);
 
-  if (isLoading) return <LoadingCard />;
+  if (isLoading) {
+    return (
+      <PatientLoader
+        label="Pulling deals from MT5 terminal…"
+        slowLabel="Still pulling — the MT5 terminal can be slow to respond under load. This is normal; no need to refresh."
+      />
+    );
+  }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-loss/30 bg-loss/5 p-4 text-xs text-loss">
-        <div>Couldn't load trades: {(error as Error).message}</div>
-        <button
-          onClick={() => refetch()}
-          className="mt-2 rounded border border-loss/40 px-2 py-1 text-[11px]"
-        >
-          Retry
-        </button>
-      </div>
+      <ErrorState
+        message={`Couldn't load trades: ${(error as Error).message}`}
+        onRetry={() => refetch()}
+      />
     );
   }
 
@@ -92,9 +93,7 @@ function AccountTrades({ accountId }: { accountId: string }) {
     );
   }
 
-  const sortedTrips = [...trips].sort(
-    (a, b) => b.closeTime.getTime() - a.closeTime.getTime(),
-  );
+  const sortedTrips = [...trips].sort((a, b) => b.closeTime.getTime() - a.closeTime.getTime());
 
   return (
     <div className="space-y-4">
@@ -143,23 +142,17 @@ function AccountTrades({ accountId }: { accountId: string }) {
                 >
                   {t.side}
                 </td>
-                <td className="px-3 py-2 text-right font-mono tabular">
-                  {t.lots.toFixed(2)}
-                </td>
+                <td className="px-3 py-2 text-right font-mono tabular">{t.lots.toFixed(2)}</td>
                 <td className="px-3 py-2 text-right font-mono tabular text-muted-foreground">
                   {t.openPrice}
                 </td>
                 <td className="px-3 py-2 text-right font-mono tabular text-muted-foreground">
                   {t.closePrice}
                 </td>
-                <td
-                  className={`px-3 py-2 text-right ${t.pnl >= 0 ? "text-profit" : "text-loss"}`}
-                >
+                <td className={`px-3 py-2 text-right ${t.pnl >= 0 ? "text-profit" : "text-loss"}`}>
                   <NumericValue value={t.pnl} format="signed" flash={false} />
                 </td>
-                <td
-                  className={`px-3 py-2 text-right ${t.net >= 0 ? "text-profit" : "text-loss"}`}
-                >
+                <td className={`px-3 py-2 text-right ${t.net >= 0 ? "text-profit" : "text-loss"}`}>
                   <NumericValue value={t.net} format="signed" flash={false} />
                 </td>
               </tr>
@@ -171,8 +164,7 @@ function AccountTrades({ accountId }: { accountId: string }) {
       {unpaired.length > 0 && (
         <details className="rounded-lg border border-border bg-card p-3 text-xs">
           <summary className="cursor-pointer text-muted-foreground">
-            {unpaired.length} unpaired deal(s) — open positions or balance
-            adjustments
+            {unpaired.length} unpaired deal(s) — open positions or balance adjustments
           </summary>
           <div className="mt-2 space-y-1 font-mono text-[11px]">
             {unpaired.map((d) => (
@@ -191,32 +183,6 @@ function AccountTrades({ accountId }: { accountId: string }) {
           </div>
         </details>
       )}
-    </div>
-  );
-}
-
-function LoadingCard() {
-  const [elapsed, setElapsed] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const pct = Math.min(100, (elapsed / 10) * 100);
-  return (
-    <div className="rounded-lg border border-border bg-card p-6">
-      <div className="flex items-center gap-2 text-sm">
-        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-        Pulling deals from MT5 terminal…
-      </div>
-      <div className="mt-3 h-1 overflow-hidden rounded bg-muted">
-        <div
-          className="h-full bg-primary transition-[width] duration-1000 ease-linear"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <div className="mt-2 font-mono text-[10px] text-muted-foreground">
-        {elapsed}s elapsed · typically ~10s
-      </div>
     </div>
   );
 }

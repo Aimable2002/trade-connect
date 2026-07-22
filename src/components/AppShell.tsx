@@ -1,5 +1,14 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Users, Trophy, History, Settings, LogOut, Activity } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Trophy,
+  History,
+  Wallet,
+  Settings,
+  LogOut,
+  Activity,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
@@ -9,6 +18,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/masters", label: "Masters", icon: Users },
   { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { to: "/pricing", label: "Pricing", icon: Wallet },
   { to: "/history", label: "History", icon: History },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
@@ -31,9 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="hidden w-56 shrink-0 border-r border-border bg-card md:flex md:flex-col">
         <div className="flex h-14 items-center gap-2 border-b border-border px-4">
           <Activity className="h-4 w-4 text-primary" />
-          <span className="font-mono text-sm font-bold tracking-widest">
-            COPYDESK
-          </span>
+          <span className="font-mono text-sm font-bold tracking-widest">COPYDESK</span>
         </div>
         <nav className="flex-1 space-y-0.5 p-2">
           {NAV.map((n) => {
@@ -70,25 +78,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="flex h-12 items-center justify-between border-b border-border bg-card px-4 md:hidden">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-primary" />
-            <span className="font-mono text-xs font-bold tracking-widest">
-              COPYDESK
-            </span>
+            <span className="font-mono text-xs font-bold tracking-widest">COPYDESK</span>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="text-xs text-muted-foreground hover:text-loss"
-          >
+          <button onClick={handleSignOut} className="text-xs text-muted-foreground hover:text-loss">
             <LogOut className="h-4 w-4" />
           </button>
         </header>
 
-        <main className="flex-1 overflow-x-hidden pb-20 md:pb-0">
-          {children}
-        </main>
+        <main className="flex-1 overflow-x-hidden pb-20 md:pb-0">{children}</main>
 
         {/* Mobile bottom nav */}
         <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-card/95 backdrop-blur md:hidden">
-          <div className="grid grid-cols-5">
+          <div className="grid grid-cols-6">
             {NAV.map((n) => {
               const active = pathname.startsWith(n.to);
               const Icon = n.icon;

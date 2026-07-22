@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { accountsQueryOptions } from "@/lib/queries";
 import { useLiveAccountState } from "@/hooks/useLiveAccountState";
 import { AccountCard } from "@/components/AccountCard";
-import { Activity, Plus } from "lucide-react";
+import { PatientLoader, ErrorState } from "@/components/DataState";
+import { Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -12,8 +13,7 @@ export const Route = createFileRoute("/_app/dashboard")({
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { data: accounts, isLoading, error } = useQuery(accountsQueryOptions());
-  // console.log(" account data :", accounts)
+  const { data: accounts, isLoading, error, refetch } = useQuery(accountsQueryOptions());
   useEffect(() => {
     if (!isLoading && accounts && accounts.length === 0) {
       navigate({ to: "/onboarding", replace: true });
@@ -22,19 +22,22 @@ function Dashboard() {
 
   const ids = (accounts ?? []).map((a) => a.account_id);
   const { data: liveMap } = useLiveAccountState(ids);
-  // console.log(" Live state data :", liveMap)
+
   if (isLoading) {
     return (
-      <div className="grid h-64 place-items-center">
-        <Activity className="h-4 w-4 animate-pulse text-primary" />
+      <div className="mx-auto max-w-5xl p-4 md:p-8">
+        <PatientLoader label="Loading your accounts…" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6 text-sm text-loss">
-        Could not load accounts: {(error as Error).message}
+      <div className="mx-auto max-w-5xl p-4 md:p-8">
+        <ErrorState
+          message={`Could not load accounts: ${(error as Error).message}`}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }
@@ -46,9 +49,7 @@ function Dashboard() {
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
             Terminal
           </div>
-          <h1 className="mt-1 truncate text-2xl font-semibold">
-            Your accounts
-          </h1>
+          <h1 className="mt-1 truncate text-2xl font-semibold">Your accounts</h1>
         </div>
         <Link
           to="/onboarding"
@@ -61,11 +62,7 @@ function Dashboard() {
 
       <div className="grid gap-4 md:grid-cols-2">
         {(accounts ?? []).map((a) => (
-          <AccountCard
-            key={a.account_id}
-            account={a}
-            live={liveMap?.[a.account_id]}
-          />
+          <AccountCard key={a.account_id} account={a} live={liveMap?.[a.account_id]} />
         ))}
       </div>
 

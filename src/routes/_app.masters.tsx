@@ -7,44 +7,33 @@ import {
   subscriptionsQueryOptions,
 } from "@/lib/queries";
 import { NumericValue } from "@/components/NumericValue";
-import {
-  maxDrawdownAbs,
-  openExposure,
-  roiPct,
-  winRate,
-} from "@/lib/trades";
+import { maxDrawdownAbs, openExposure, roiPct, winRate } from "@/lib/trades";
 import type { DirectoryMaster } from "@/lib/api";
+import { PatientLoader, ErrorState } from "@/components/DataState";
 
 export const Route = createFileRoute("/_app/masters")({
   component: MastersDirectory,
 });
 
 function MastersDirectory() {
-  const { data: masters, isLoading, error } = useQuery(
-    mastersDirectoryQueryOptions(),
-  );
+  const { data: masters, isLoading, error, refetch } = useQuery(mastersDirectoryQueryOptions());
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 md:p-8">
       <header>
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Directory
-        </div>
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Directory</div>
         <h1 className="mt-1 text-2xl font-semibold">Masters</h1>
         <p className="mt-1 text-xs text-muted-foreground">
           Stats computed live from each master's MT5 deals. First load ~10s.
         </p>
       </header>
 
-      {isLoading && (
-        <div className="rounded-lg border border-border bg-card p-6 text-center text-xs text-muted-foreground">
-          Loading directory…
-        </div>
-      )}
+      {isLoading && <PatientLoader label="Loading directory…" />}
       {error && (
-        <div className="rounded-lg border border-loss/30 bg-loss/5 p-4 text-xs text-loss">
-          Couldn't load directory: {(error as Error).message}
-        </div>
+        <ErrorState
+          message={`Couldn't load directory: ${(error as Error).message}`}
+          onRetry={() => refetch()}
+        />
       )}
       {!isLoading && !error && (masters ?? []).length === 0 && (
         <div className="rounded-lg border border-dashed border-border p-8 text-center text-xs text-muted-foreground">
@@ -65,13 +54,9 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
   const navigate = useNavigate();
   const { data: accounts } = useQuery(accountsQueryOptions());
   const { data: subs } = useQuery(subscriptionsQueryOptions());
-  const isMine = (accounts ?? []).some(
-    (a) => a.account_id === master.account_id,
-  );
+  const isMine = (accounts ?? []).some((a) => a.account_id === master.account_id);
 
-  const { data: deals, isLoading, error } = useQuery(
-    masterTradesQueryOptions(master.account_id),
-  );
+  const { data: deals, isLoading, error } = useQuery(masterTradesQueryOptions(master.account_id));
 
   const roi = deals ? roiPct(deals) : null;
   const dd = deals ? maxDrawdownAbs(deals) : null;
@@ -111,9 +96,7 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
       </div>
 
       {master.bio && (
-        <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">
-          {master.bio}
-        </p>
+        <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{master.bio}</p>
       )}
 
       <div className="mt-4 grid grid-cols-4 gap-px overflow-hidden rounded border border-border bg-border">
@@ -135,17 +118,13 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
           label="Max DD"
           loading={isLoading}
           error={!!error}
-          value={
-            dd === null ? "—" : <NumericValue value={dd} flash={false} />
-          }
+          value={dd === null ? "—" : <NumericValue value={dd} flash={false} />}
         />
         <Stat
           label="Open exp"
           loading={isLoading}
           error={!!error}
-          value={
-            exp === null ? "—" : `${exp.toFixed(2)}`
-          }
+          value={exp === null ? "—" : `${exp.toFixed(2)}`}
         />
         <Stat
           label="30d win"
@@ -185,7 +164,7 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
           onClick={() =>
             navigate({
               to: "/onboarding",
-              search: { master: master.account_id } as never,
+              search: { master: master.account_id },
             })
           }
           className="flex-1 rounded-md border border-primary/40 bg-primary/10 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
@@ -210,9 +189,7 @@ function Stat({
 }) {
   return (
     <div className="bg-card p-2">
-      <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
-        {label}
-      </div>
+      <div className="text-[9px] uppercase tracking-widest text-muted-foreground">{label}</div>
       <div className="mt-1 text-xs">
         {loading ? (
           <span className="text-muted-foreground/60">…</span>
@@ -225,3 +202,4 @@ function Stat({
     </div>
   );
 }
+

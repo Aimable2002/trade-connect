@@ -12,11 +12,11 @@ import { ApiError, selectPackage, topupWallet } from "@/lib/api";
 import { NumericValue } from "@/components/NumericValue";
 import { toast } from "sonner";
 import { Wallet, Package as PackageIcon } from "lucide-react";
+import { PatientLoader, ErrorState } from "@/components/DataState";
 
 export const Route = createFileRoute("/_app/pricing")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    account:
-      typeof search.account === "string" ? search.account : undefined,
+  validateSearch: (search: Record<string, unknown>): { account?: string } => ({
+    account: typeof search.account === "string" ? search.account : undefined,
   }),
   component: Pricing,
 });
@@ -96,8 +96,7 @@ function PricingForAccount({ accountId }: { accountId: string }) {
       toast.success("Wallet topped up.");
       qc.invalidateQueries({ queryKey: ["accounts", accountId] });
     },
-    onError: (e) =>
-      toast.error(e instanceof ApiError ? e.message : (e as Error).message),
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message),
   });
 
   const pick = useMutation({
@@ -106,12 +105,10 @@ function PricingForAccount({ accountId }: { accountId: string }) {
       toast.success("Package activated.");
       qc.invalidateQueries({ queryKey: ["accounts", accountId] });
     },
-    onError: (e) =>
-      toast.error(e instanceof ApiError ? e.message : (e as Error).message),
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message),
   });
 
-  const currentPkg =
-    billing && "package_code" in billing ? billing.package_code : null;
+  const currentPkg = billing && "package_code" in billing ? billing.package_code : null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-8">
@@ -164,15 +161,9 @@ function PricingForAccount({ accountId }: { accountId: string }) {
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
           <PackageIcon className="h-3 w-3" /> Active packages
         </div>
-        {pkgLoading && (
-          <div className="rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground">
-            Loading packages…
-          </div>
-        )}
+        {pkgLoading && <PatientLoader label="Loading packages…" />}
         {pkgError && (
-          <div className="rounded-lg border border-loss/30 bg-loss/5 p-4 text-xs text-loss">
-            Couldn't load packages: {(pkgError as Error).message}
-          </div>
+          <ErrorState message={`Couldn't load packages: ${(pkgError as Error).message}`} />
         )}
         <div className="grid gap-3 sm:grid-cols-2">
           {(packages ?? []).map((p) => (
@@ -210,9 +201,7 @@ function PackageCard({
       }
     >
       <div className="flex items-center justify-between">
-        <div className="font-mono text-sm font-semibold uppercase">
-          {pkg.code}
-        </div>
+        <div className="font-mono text-sm font-semibold uppercase">{pkg.code}</div>
         {current && (
           <span className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-primary">
             Current
@@ -228,11 +217,7 @@ function PackageCard({
         </dd>
         <dt className="text-muted-foreground">Slot fee</dt>
         <dd className="text-right font-mono">
-          <NumericValue
-            value={pkg.slot_fee_per_slot}
-            format="currency"
-            flash={false}
-          />
+          <NumericValue value={pkg.slot_fee_per_slot} format="currency" flash={false} />
         </dd>
         <dt className="text-muted-foreground">Roster</dt>
         <dd className="text-right font-mono">{pkg.base_roster_size}</dd>
