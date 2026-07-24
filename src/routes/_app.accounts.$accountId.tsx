@@ -540,11 +540,17 @@ function MasterRateEditor({ accountId }: { accountId: string }) {
 
   const currentRate = rate?.rate_percent ?? 0;
 
-  // The master only ever sets their own cut of follower profits. The
-  // platform's fee is not negotiable or master-editable — it's always 10%
-  // of whatever the master charges, deducted automatically.
+  // The master only ever sets their own cut rate. The platform's cut is a
+  // flat number of percentage points of the follower's P&L (not a
+  // percentage OF the master's rate - see profit_share.py's
+  // process_follower_deals, which does `pnl * platform_cut_percent / 100`
+  // directly), deducted from whatever the master charges. This has to
+  // match that formula exactly, or this preview lies to the master about
+  // what they'll actually keep - which it previously did, by computing
+  // PLATFORM_FEE_OF_MASTER_CUT_PCT as a percentage OF rNum instead of
+  // using it directly.
   const rNum = parseFloat(ratePct || String(currentRate));
-  const previewPlatformFee = isFinite(rNum) ? (rNum * PLATFORM_FEE_OF_MASTER_CUT_PCT) / 100 : null;
+  const previewPlatformFee = isFinite(rNum) ? PLATFORM_FEE_OF_MASTER_CUT_PCT : null;
   const previewNet =
     isFinite(rNum) && previewPlatformFee !== null ? rNum - previewPlatformFee : null;
 
@@ -570,8 +576,8 @@ function MasterRateEditor({ accountId }: { accountId: string }) {
       </div>
       <p className="mt-1 text-[11px] text-muted-foreground">
         Set the percentage of each follower's profit you charge as your fee. The platform
-        automatically takes {PLATFORM_FEE_OF_MASTER_CUT_PCT}% of that fee — you never set the
-        platform's share, it's calculated for you.
+        automatically takes {PLATFORM_FEE_OF_MASTER_CUT_PCT} percentage points of that profit off
+        the top — you never set the platform's share, it's calculated for you.
       </p>
       {isLoading ? (
         <PatientLoader label="Loading rate…" compact className="mt-2" />
@@ -580,7 +586,7 @@ function MasterRateEditor({ accountId }: { accountId: string }) {
           <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
             <Info label="Your cut rate" value={`${currentRate}%`} />
             <Info
-              label={`Platform fee (${PLATFORM_FEE_OF_MASTER_CUT_PCT}% of your cut)`}
+              label="Platform fee (flat points off your P&L cut)"
               value={`${rate?.platform_cut_percent ?? PLATFORM_FEE_OF_MASTER_CUT_PCT}%`}
             />
             <Info label="You keep" value={`${rate?.master_net_percent ?? "—"}%`} accent />
