@@ -174,6 +174,17 @@ export const upsertMasterProfile = (accountId: string, input: MasterProfileInput
     timeoutMs: 15_000,
   });
 
+// Reads THIS account's own profile regardless of is_public - the directory
+// endpoint below only ever returns already-public masters, so it can't be
+// used to pre-fill an editor for a private (or never-saved) profile. 404
+// means "no profile saved yet" (a genuinely blank editor), not an error -
+// see how this is consumed in masterProfileQueryOptions.
+export const getMasterProfile = (accountId: string) =>
+  authedFetch<MasterProfile>(`/masters/${accountId}/profile`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
 export interface DirectoryMaster {
   account_id: string;
   display_name: string;

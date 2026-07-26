@@ -9,16 +9,19 @@ import {
   getAccountTrades,
   getBilling,
   getMasterEarnings,
+  getMasterProfile,
   getMasterRate,
   getMasterTrades,
   getMastersDirectory,
   getRoster,
   getWallet,
   getWalletTransactions,
+  ApiError,
   type Billing,
   type Deal,
   type DirectoryMaster,
   type MasterEarnings,
+  type MasterProfile,
   type MasterRate,
   type RosterResponse,
   type Wallet,
@@ -72,6 +75,27 @@ export const mastersDirectoryQueryOptions = () =>
     queryKey: ["masters", "directory"],
     queryFn: (): Promise<DirectoryMaster[]> => getMastersDirectory(),
     staleTime: 60_000,
+  });
+
+// This account's own profile, regardless of public/private - unlike
+// mastersDirectoryQueryOptions above, which only ever returns already-public
+// masters and so can't be used to pre-fill an editor for a private profile.
+// A 404 means "this master has never saved a profile" - a real, valid
+// result (a genuinely blank editor), not a fetch failure, so it resolves to
+// null instead of throwing.
+export const masterProfileQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["masters", accountId, "profile"],
+    enabled: !!accountId,
+    queryFn: async (): Promise<MasterProfile | null> => {
+      try {
+        return await getMasterProfile(accountId!);
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) return null;
+        throw e;
+      }
+    },
+    staleTime: 10_000,
   });
 
 export const accountTradesQueryOptions = (accountId: string | undefined) =>

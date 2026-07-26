@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Area,
@@ -30,6 +30,7 @@ import {
   accountsQueryOptions,
   billingQueryOptions,
   masterEarningsQueryOptions,
+  masterProfileQueryOptions,
   masterRateQueryOptions,
   mastersDirectoryQueryOptions,
   rosterQueryOptions,
@@ -462,11 +463,31 @@ function MiniKpi({
 
 function MasterProfileEditor({ accountId }: { accountId: string }) {
   const qc = useQueryClient();
-  const { data: directory } = useQuery(mastersDirectoryQueryOptions());
-  const existing = (directory ?? []).find((m) => m.account_id === accountId);
-  const [displayName, setDisplayName] = useState(existing?.display_name ?? "");
-  const [bio, setBio] = useState(existing?.bio ?? "");
-  const [isPublic, setIsPublic] = useState(!!existing);
+  // This account's OWN profile, regardless of public/private - NOT the
+  // public directory (mastersDirectoryQueryOptions), which only ever
+  // returns already-public masters and so can never reflect a private
+  // profile's real saved data, or distinguish "private with real data"
+  // from "never saved anything" (both looked identical - blank - before
+  // this fix, since both were simply absent from the directory list).
+  const { data: profile, isLoading } = useQuery(masterProfileQueryOptions(accountId));
+
+  const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
+
+  // useState's initializer only runs once, at mount - it can't react to
+  // `profile` arriving later from the query above, which is the normal
+  // case (the query is still loading on first render). Without this
+  // effect, the fields would stay permanently blank/unchecked even after
+  // real data loads, which was the actual bug: it wasn't that the data
+  // wasn't fetched, it's that fetching it after mount had nowhere to go.
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.display_name ?? "");
+      setBio(profile.bio ?? "");
+      setIsPublic(profile.is_public);
+    }
+  }, [profile]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -478,9 +499,21 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
     onSuccess: () => {
       toast.success("Profile saved.");
       qc.invalidateQueries({ queryKey: ["masters", "directory"] });
+      qc.invalidateQueries({ queryKey: ["masters", accountId, "profile"] });
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message),
   });
+
+  if (isLoading) {
+    return (
+      <section className="rounded-lg border border-border bg-card p-4">
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+          Public profile
+        </div>
+        <PatientLoader label="Loading profile…" compact className="mt-2" />
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
@@ -502,6 +535,7 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Not set yet"
             className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm outline-none focus:border-primary"
           />
         </Field>
@@ -510,6 +544,7 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={3}
+            placeholder="Not set yet"
             className="w-full resize-none rounded-md border border-border bg-input px-3 py-2 text-sm outline-none focus:border-primary"
           />
         </Field>
