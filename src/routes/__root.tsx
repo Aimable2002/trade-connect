@@ -73,11 +73,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Copy live MetaTrader 5 trades from vetted masters to your own broker account in real time.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "/android-chrome-512x512.png" },
       { name: "twitter:card", content: "summary_large_image" },
+      // --- PWA / installability meta ---
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "CopyDesk" },
+      { name: "application-name", content: "CopyDesk" },
+      { name: "msapplication-TileColor", content: "#0b0f1a" },
+      { name: "msapplication-TileImage", content: "/android-chrome-192x192.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/site.webmanifest" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { rel: "icon", href: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       {
         rel: "preconnect",
@@ -127,6 +140,15 @@ function RootComponent() {
     });
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {
+        // Installability degrades gracefully without a service worker —
+        // never block the app on this.
+      });
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
