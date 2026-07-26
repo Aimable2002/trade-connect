@@ -619,12 +619,23 @@ function MasterRateEditor({ accountId }: { accountId: string }) {
       ) : (
         <>
           <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
-            <Info label="Your cut rate" value={`${currentRate}%`} />
+            <Info 
+              label="Your cut rate" 
+              value={rate?.rate_percent != null ? `${rate.rate_percent}%` : "—"} 
+            />
             <Info
               label="Platform fee (flat points off your P&L cut)"
               value={`${rate?.platform_cut_percent ?? PLATFORM_FEE_OF_MASTER_CUT_PCT}%`}
             />
-            <Info label="You keep" value={`${currentRate != null ? currentRate - PLATFORM_FEE_OF_MASTER_CUT_PCT : "—"}%`} accent />
+            <Info
+              label="You keep"
+              value={
+                rate?.rate_percent != null
+                  ? `${rate.rate_percent - (rate.platform_cut_percent ?? PLATFORM_FEE_OF_MASTER_CUT_PCT)}%`
+                  : "—"
+              }
+              accent
+            />
           </div>
           <form
             className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]"
