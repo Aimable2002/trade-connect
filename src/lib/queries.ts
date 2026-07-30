@@ -35,6 +35,7 @@ export const accountsQueryOptions = () =>
       const { data, error } = await supabase
         .from("accounts")
         .select("*")
+        .neq("status", "closed")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as AccountRow[];
