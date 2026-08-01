@@ -67,7 +67,7 @@ function ChallengesPage() {
         </div>
       </header>
 
-      <PlaceholderBanner label="Mock data — challenge system is not wired to a backend yet." />
+      <PlaceholderBanner text="Mock data — challenge system is not wired to a backend yet." />
 
       <div className="grid gap-4 md:grid-cols-2">
         {state.challenges.map((c) => (

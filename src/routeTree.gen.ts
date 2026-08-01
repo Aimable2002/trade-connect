@@ -20,6 +20,7 @@ import { Route as AppLeaderboardRouteImport } from './routes/_app.leaderboard'
 import { Route as AppHistoryRouteImport } from './routes/_app.history'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppChallengesRouteImport } from './routes/_app.challenges'
+import { Route as AppChallengesIndexRouteImport } from './routes/_app.challenges.index'
 import { Route as AppInsightAccountIdRouteImport } from './routes/_app.insight.$accountId'
 import { Route as AppAccountsAccountIdRouteImport } from './routes/_app.accounts.$accountId'
 
@@ -77,6 +78,11 @@ const AppChallengesRoute = AppChallengesRouteImport.update({
   path: '/challenges',
   getParentRoute: () => AppRoute,
 } as any)
+const AppChallengesIndexRoute = AppChallengesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppChallengesRoute,
+} as any)
 const AppInsightAccountIdRoute = AppInsightAccountIdRouteImport.update({
   id: '/insight/$accountId',
   path: '/insight/$accountId',
@@ -91,7 +97,7 @@ const AppAccountsAccountIdRoute = AppAccountsAccountIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/challenges': typeof AppChallengesRoute
+  '/challenges': typeof AppChallengesRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/history': typeof AppHistoryRoute
   '/leaderboard': typeof AppLeaderboardRoute
@@ -101,11 +107,11 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/insight/$accountId': typeof AppInsightAccountIdRoute
+  '/challenges/': typeof AppChallengesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/challenges': typeof AppChallengesRoute
   '/dashboard': typeof AppDashboardRoute
   '/history': typeof AppHistoryRoute
   '/leaderboard': typeof AppLeaderboardRoute
@@ -115,13 +121,14 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/insight/$accountId': typeof AppInsightAccountIdRoute
+  '/challenges': typeof AppChallengesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_app/challenges': typeof AppChallengesRoute
+  '/_app/challenges': typeof AppChallengesRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/history': typeof AppHistoryRoute
   '/_app/leaderboard': typeof AppLeaderboardRoute
@@ -131,6 +138,7 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/_app/insight/$accountId': typeof AppInsightAccountIdRoute
+  '/_app/challenges/': typeof AppChallengesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,11 +155,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/accounts/$accountId'
     | '/insight/$accountId'
+    | '/challenges/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
-    | '/challenges'
     | '/dashboard'
     | '/history'
     | '/leaderboard'
@@ -161,6 +169,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/accounts/$accountId'
     | '/insight/$accountId'
+    | '/challenges'
   id:
     | '__root__'
     | '/'
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/accounts/$accountId'
     | '/_app/insight/$accountId'
+    | '/_app/challenges/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -263,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChallengesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/challenges/': {
+      id: '/_app/challenges/'
+      path: '/'
+      fullPath: '/challenges/'
+      preLoaderRoute: typeof AppChallengesIndexRouteImport
+      parentRoute: typeof AppChallengesRoute
+    }
     '/_app/insight/$accountId': {
       id: '/_app/insight/$accountId'
       path: '/insight/$accountId'
@@ -280,8 +297,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppChallengesRouteChildren {
+  AppChallengesIndexRoute: typeof AppChallengesIndexRoute
+}
+
+const AppChallengesRouteChildren: AppChallengesRouteChildren = {
+  AppChallengesIndexRoute: AppChallengesIndexRoute,
+}
+
+const AppChallengesRouteWithChildren = AppChallengesRoute._addFileChildren(
+  AppChallengesRouteChildren,
+)
+
 interface AppRouteChildren {
-  AppChallengesRoute: typeof AppChallengesRoute
+  AppChallengesRoute: typeof AppChallengesRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
   AppHistoryRoute: typeof AppHistoryRoute
   AppLeaderboardRoute: typeof AppLeaderboardRoute
@@ -294,7 +323,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppChallengesRoute: AppChallengesRoute,
+  AppChallengesRoute: AppChallengesRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
   AppHistoryRoute: AppHistoryRoute,
   AppLeaderboardRoute: AppLeaderboardRoute,
