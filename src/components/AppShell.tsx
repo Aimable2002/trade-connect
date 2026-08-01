@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   Activity,
+  Award,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
@@ -18,6 +19,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/masters", label: "Masters", icon: Users },
   { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { to: "/challenges", label: "Challenges", icon: Award },
   { to: "/pricing", label: "Pricing", icon: Wallet },
   { to: "/history", label: "History", icon: History },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -89,7 +91,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Mobile bottom nav */}
         <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-card/95 backdrop-blur md:hidden">
-          <div className="grid grid-cols-6">
+          <div className="grid grid-cols-4">
             {NAV.map((n) => {
               const active = pathname.startsWith(n.to);
               const Icon = n.icon;

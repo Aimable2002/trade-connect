@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { ChallengeStatusPanel } from "@/components/challenges/ChallengeStatusPanel";
 import { toast } from "sonner";
 import {
   Area,
@@ -258,6 +259,7 @@ function MasterSections({ accountId }: { accountId: string }) {
       <MasterProfileEditor accountId={accountId} />
       <MasterRateEditor accountId={accountId} />
       <MasterEarningsPanel accountId={accountId} />
+      <ChallengeStatusPanel />
     </>
   );
 }
