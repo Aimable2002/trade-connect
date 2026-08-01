@@ -5,6 +5,7 @@ import { accountsQueryOptions } from "@/lib/queries";
 import { useLiveAccountState } from "@/hooks/useLiveAccountState";
 import { AccountCard } from "@/components/AccountCard";
 import { PatientLoader, ErrorState } from "@/components/DataState";
+import { DashboardPerformance } from "@/components/DashboardPerformance";
 import { Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_app/dashboard")({
@@ -59,6 +60,8 @@ function Dashboard() {
           Add account
         </Link>
       </header>
+
+      {(accounts ?? []).length > 0 && <DashboardPerformance accounts={accounts ?? []} />}
 
       <div className="grid gap-4 md:grid-cols-2">
         {(accounts ?? []).map((a) => (

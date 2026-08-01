@@ -30,7 +30,7 @@ import {
   maxDrawdownPct,
   pairDeals,
   profitFactor,
-  roiPct,
+  netPnl,
   trackRecordDays,
   winRate,
 } from "@/lib/trades";
@@ -58,7 +58,7 @@ function Insight() {
   const stats = useMemo(() => {
     if (!deals) return null;
     return {
-      roi: roiPct(deals),
+      pnl: netPnl(deals),
       dd: maxDrawdownAbs(deals),
       ddPct: maxDrawdownPct(deals),
       pf: profitFactor(deals),
@@ -205,7 +205,7 @@ function KpiGrid({
   stats,
 }: {
   stats: {
-    roi: number | null;
+    pnl: number;
     dd: number;
     ddPct: number | null;
     pf: number | null;
@@ -215,22 +215,14 @@ function KpiGrid({
     track: number | null;
   };
 }) {
-  const roiPositive = (stats.roi ?? 0) >= 0;
+  const pnlPositive = stats.pnl >= 0;
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       <KpiCard
-        label="All-time ROI"
-        accent={roiPositive ? "profit" : "loss"}
-        icon={roiPositive ? TrendingUp : TrendingDown}
-        value={
-          stats.roi === null ? (
-            "—"
-          ) : (
-            <>
-              <NumericValue value={stats.roi} decimals={1} flash={false} />%
-            </>
-          )
-        }
+        label="All-time net P&L"
+        accent={pnlPositive ? "profit" : "loss"}
+        icon={pnlPositive ? TrendingUp : TrendingDown}
+        value={<NumericValue value={stats.pnl} format="signed" flash={false} />}
       />
       <KpiCard
         label="Max drawdown"

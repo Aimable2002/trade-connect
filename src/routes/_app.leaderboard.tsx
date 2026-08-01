@@ -14,7 +14,7 @@ import {
   maxDrawdownAbs,
   profitFactor,
   returnDrawdownRatio,
-  roiPct,
+  netPnl,
   trackRecordDays,
   winRate,
 } from "@/lib/trades";
@@ -31,7 +31,7 @@ interface Row {
   name: string;
   rate: number | null;
   ret30: number | null;
-  roi: number | null;
+  pnl: number | null;
   dd: number | null;
   pf: number | null;
   rdd: number | null;
@@ -70,7 +70,7 @@ function Leaderboard() {
         name: m.display_name,
         rate: m.rate_percent ?? null,
         ret30: deals ? computeReturnAbs(deals, 30) : null,
-        roi: deals ? roiPct(deals) : null,
+        pnl: deals ? netPnl(deals) : null,
         dd: deals ? maxDrawdownAbs(deals) : null,
         pf: deals ? profitFactor(deals) : null,
         rdd: deals ? returnDrawdownRatio(deals) : null,
@@ -87,9 +87,9 @@ function Leaderboard() {
   }, [masters, tradeResults, subs]);
 
   const ranked = useMemo(() => {
-    const withData = rows.filter((r) => r.roi !== null);
-    const withoutData = rows.filter((r) => r.roi === null);
-    withData.sort((a, b) => (b.roi ?? 0) - (a.roi ?? 0));
+    const withData = rows.filter((r) => r.pnl !== null);
+    const withoutData = rows.filter((r) => r.pnl === null);
+    withData.sort((a, b) => (b.pnl ?? 0) - (a.pnl ?? 0));
     return [...withData, ...withoutData];
   }, [rows]);
 
@@ -99,7 +99,7 @@ function Leaderboard() {
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Ranked</div>
         <h1 className="mt-1 text-2xl font-semibold">Leaderboard</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Ranked by all-time ROI computed client-side from raw MT5 deals. First load per master
+          Ranked by all-time net P&L computed client-side from raw MT5 deals. First load per master
           takes ~10s. Scroll horizontally on mobile.
         </p>
       </header>
@@ -125,7 +125,7 @@ function Leaderboard() {
                 <th className="px-3 py-2 text-left">#</th>
                 <th className="px-3 py-2 text-left">Master</th>
                 <th className="px-3 py-2 text-right">Rate</th>
-                <th className="px-3 py-2 text-right">ROI %</th>
+                <th className="px-3 py-2 text-right">Net P&amp;L</th>
                 <th className="px-3 py-2 text-right">30d P&amp;L</th>
                 <th className="px-3 py-2 text-right">Max DD</th>
                 <th className="px-3 py-2 text-right">PF</th>
@@ -158,11 +158,11 @@ function Leaderboard() {
                   </td>
                   <Num>{r.rate === null ? "—" : `${r.rate}%`}</Num>
                   <Cell row={r}>
-                    {r.roi === null ? (
+                    {r.pnl === null ? (
                       "—"
                     ) : (
-                      <span className={r.roi >= 0 ? "text-profit" : "text-loss"}>
-                        <NumericValue value={r.roi} decimals={1} flash={false} />%
+                      <span className={r.pnl >= 0 ? "text-profit" : "text-loss"}>
+                        <NumericValue value={r.pnl} format="signed" flash={false} />
                       </span>
                     )}
                   </Cell>

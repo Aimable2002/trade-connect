@@ -216,7 +216,7 @@ function HowItWorks() {
     {
       icon: Users,
       title: "Pick a master",
-      body: "Browse the directory, compare live ROI, drawdown, win rate, and track record — all computed straight from raw MT5 deal history.",
+      body: "Browse the directory, compare live P&L, drawdown, win rate, and track record — all computed straight from raw MT5 deal history.",
     },
     {
       icon: Cable,

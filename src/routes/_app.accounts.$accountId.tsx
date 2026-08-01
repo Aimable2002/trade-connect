@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { ChallengeStatusPanel } from "@/components/challenges/ChallengeStatusPanel";
 import { toast } from "sonner";
 import {
   Area,
@@ -60,7 +61,7 @@ import {
   maxDrawdownPct,
   pairDeals,
   profitFactor,
-  roiPct,
+  netPnl,
   winRate,
 } from "@/lib/trades";
 
@@ -258,6 +259,7 @@ function MasterSections({ accountId }: { accountId: string }) {
       <MasterProfileEditor accountId={accountId} />
       <MasterRateEditor accountId={accountId} />
       <MasterEarningsPanel accountId={accountId} />
+      <ChallengeStatusPanel />
     </>
   );
 }
@@ -268,7 +270,7 @@ function MasterPerformancePanel({ accountId }: { accountId: string }) {
   const stats = useMemo(() => {
     if (!deals) return null;
     return {
-      roi: roiPct(deals),
+      pnl: netPnl(deals),
       dd: maxDrawdownAbs(deals),
       ddPct: maxDrawdownPct(deals),
       pf: profitFactor(deals),
@@ -294,17 +296,10 @@ function MasterPerformancePanel({ accountId }: { accountId: string }) {
         <>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <MiniKpi
-              label="ROI"
-              accent={(stats.roi ?? 0) >= 0 ? "profit" : "loss"}
-              icon={(stats.roi ?? 0) >= 0 ? TrendingUp : TrendingDown}
-              value={
-                stats.roi === null ? (
-                  "—"
-                ) : (
-                  <NumericValue value={stats.roi} decimals={1} flash={false} />
-                )
-              }
-              suffix={stats.roi === null ? undefined : "%"}
+              label="Net P&L"
+              accent={stats.pnl >= 0 ? "profit" : "loss"}
+              icon={stats.pnl >= 0 ? TrendingUp : TrendingDown}
+              value={<NumericValue value={stats.pnl} format="signed" flash={false} />}
             />
             <MiniKpi
               label="Max DD"
