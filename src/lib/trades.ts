@@ -272,3 +272,10 @@ export function byHourOfDay(deals: Deal[]): number[] {
   }
   return bins;
 }
+
+/** Total net P&L (pnl + commission + swap) over all closed deals. */
+export function netPnl(deals: Deal[]): number {
+  return deals
+    .filter(isClose)
+    .reduce((a, d) => a + d.pnl + (d.commission ?? 0) + (d.swap ?? 0), 0);
+}
