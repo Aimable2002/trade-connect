@@ -279,3 +279,19 @@ export function netPnl(deals: Deal[]): number {
     .filter(isClose)
     .reduce((a, d) => a + d.pnl + (d.commission ?? 0) + (d.swap ?? 0), 0);
 }
+
+/** Running cumulative net P&L from closed deals only, chronological. */
+export function cumulativePnlCurve(deals: Deal[]): EquityPoint[] {
+  const closes = deals
+    .filter(isClose)
+    .sort(
+      (a, b) =>
+        parseDealTime(a.deal_time).getTime() -
+        parseDealTime(b.deal_time).getTime(),
+    );
+  let acc = 0;
+  return closes.map((d) => {
+    acc += d.pnl + (d.commission ?? 0) + (d.swap ?? 0);
+    return { time: parseDealTime(d.deal_time), equity: acc };
+  });
+}
