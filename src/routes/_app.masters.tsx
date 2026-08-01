@@ -7,7 +7,7 @@ import {
   subscriptionsQueryOptions,
 } from "@/lib/queries";
 import { NumericValue } from "@/components/NumericValue";
-import { maxDrawdownAbs, openExposure, roiPct, winRate } from "@/lib/trades";
+import { maxDrawdownAbs, netPnl, openExposure, winRate } from "@/lib/trades";
 import type { DirectoryMaster } from "@/lib/api";
 import { PatientLoader, ErrorState } from "@/components/DataState";
 
@@ -58,7 +58,7 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
 
   const { data: deals, isLoading, error } = useQuery(masterTradesQueryOptions(master.account_id));
 
-  const roi = deals ? roiPct(deals) : null;
+  const pnl = deals ? netPnl(deals) : null;
   const dd = deals ? maxDrawdownAbs(deals) : null;
   const exp = deals ? openExposure(deals) : null;
   const wr = deals ? winRate(deals, 30) : null;
@@ -101,15 +101,15 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
 
       <div className="mt-4 grid grid-cols-4 gap-px overflow-hidden rounded border border-border bg-border">
         <Stat
-          label="ROI"
+          label="Net P&L"
           loading={isLoading}
           error={!!error}
           value={
-            roi === null ? (
+            pnl === null ? (
               "—"
             ) : (
-              <span className={roi >= 0 ? "text-profit" : "text-loss"}>
-                <NumericValue value={roi} decimals={1} flash={false} />%
+              <span className={pnl >= 0 ? "text-profit" : "text-loss"}>
+                <NumericValue value={pnl} format="signed" flash={false} />
               </span>
             )
           }
