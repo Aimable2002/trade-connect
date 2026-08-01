@@ -23,6 +23,7 @@ import { Route as AppChallengesRouteImport } from './routes/_app.challenges'
 import { Route as AppChallengesIndexRouteImport } from './routes/_app.challenges.index'
 import { Route as AppInsightAccountIdRouteImport } from './routes/_app.insight.$accountId'
 import { Route as AppChallengesHistoryRouteImport } from './routes/_app.challenges.history'
+import { Route as AppAdminChallengesRouteImport } from './routes/_app.admin.challenges'
 import { Route as AppAccountsAccountIdRouteImport } from './routes/_app.accounts.$accountId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -94,6 +95,11 @@ const AppChallengesHistoryRoute = AppChallengesHistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => AppChallengesRoute,
 } as any)
+const AppAdminChallengesRoute = AppAdminChallengesRouteImport.update({
+  id: '/admin/challenges',
+  path: '/admin/challenges',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAccountsAccountIdRoute = AppAccountsAccountIdRouteImport.update({
   id: '/accounts/$accountId',
   path: '/accounts/$accountId',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof AppPricingRoute
   '/settings': typeof AppSettingsRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
+  '/admin/challenges': typeof AppAdminChallengesRoute
   '/challenges/history': typeof AppChallengesHistoryRoute
   '/insight/$accountId': typeof AppInsightAccountIdRoute
   '/challenges/': typeof AppChallengesIndexRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof AppPricingRoute
   '/settings': typeof AppSettingsRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
+  '/admin/challenges': typeof AppAdminChallengesRoute
   '/challenges/history': typeof AppChallengesHistoryRoute
   '/insight/$accountId': typeof AppInsightAccountIdRoute
   '/challenges': typeof AppChallengesIndexRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/_app/pricing': typeof AppPricingRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/accounts/$accountId': typeof AppAccountsAccountIdRoute
+  '/_app/admin/challenges': typeof AppAdminChallengesRoute
   '/_app/challenges/history': typeof AppChallengesHistoryRoute
   '/_app/insight/$accountId': typeof AppInsightAccountIdRoute
   '/_app/challenges/': typeof AppChallengesIndexRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/settings'
     | '/accounts/$accountId'
+    | '/admin/challenges'
     | '/challenges/history'
     | '/insight/$accountId'
     | '/challenges/'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/settings'
     | '/accounts/$accountId'
+    | '/admin/challenges'
     | '/challenges/history'
     | '/insight/$accountId'
     | '/challenges'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/_app/pricing'
     | '/_app/settings'
     | '/_app/accounts/$accountId'
+    | '/_app/admin/challenges'
     | '/_app/challenges/history'
     | '/_app/insight/$accountId'
     | '/_app/challenges/'
@@ -306,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChallengesHistoryRouteImport
       parentRoute: typeof AppChallengesRoute
     }
+    '/_app/admin/challenges': {
+      id: '/_app/admin/challenges'
+      path: '/admin/challenges'
+      fullPath: '/admin/challenges'
+      preLoaderRoute: typeof AppAdminChallengesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/accounts/$accountId': {
       id: '/_app/accounts/$accountId'
       path: '/accounts/$accountId'
@@ -340,6 +359,7 @@ interface AppRouteChildren {
   AppPricingRoute: typeof AppPricingRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppAccountsAccountIdRoute: typeof AppAccountsAccountIdRoute
+  AppAdminChallengesRoute: typeof AppAdminChallengesRoute
   AppInsightAccountIdRoute: typeof AppInsightAccountIdRoute
 }
 
@@ -353,6 +373,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPricingRoute: AppPricingRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppAccountsAccountIdRoute: AppAccountsAccountIdRoute,
+  AppAdminChallengesRoute: AppAdminChallengesRoute,
   AppInsightAccountIdRoute: AppInsightAccountIdRoute,
 }
 
