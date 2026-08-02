@@ -58,7 +58,13 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
 
   const { data: deals, isLoading, error } = useQuery(masterTradesQueryOptions(master.account_id));
 
+  // A master whose deal history can't be read (or is empty) has nothing
+  // meaningful to compare against, so the card is hidden rather than shown
+  // as a wall of "err" / "—".
+  if (error || (deals && deals.length === 0)) return null;
+
   const pnl = deals ? netPnl(deals) : null;
+
   const dd = deals ? maxDrawdownAbs(deals) : null;
   const exp = deals ? openExposure(deals) : null;
   const wr = deals ? winRate(deals, 30) : null;
