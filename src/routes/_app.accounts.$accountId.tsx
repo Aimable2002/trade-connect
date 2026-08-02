@@ -263,6 +263,8 @@ function MasterSections({ accountId }: { accountId: string }) {
       <MasterProfileEditor accountId={accountId} />
       <MasterRateEditor accountId={accountId} />
       <MasterEarningsPanel accountId={accountId} />
+      <MasterPayoutCard accountId={accountId} />
+
       <ChallengeStatusPanel />
     </>
   );
