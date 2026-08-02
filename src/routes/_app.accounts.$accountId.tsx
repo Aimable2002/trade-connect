@@ -543,15 +543,35 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
             className="w-full resize-none rounded-md border border-border bg-input px-3 py-2 text-sm outline-none focus:border-primary"
           />
         </Field>
-        <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
-            checked={isPublic}
-            onChange={(e) => setIsPublic(e.target.checked)}
-            className="h-4 w-4 accent-primary"
-          />
-          List me in the public directory
-        </label>
+        {/* Directory listing is decided by the platform, not the master, so
+            this is a status readout rather than a control. The saved value is
+            still round-tripped through `isPublic` above. */}
+        <div
+          className={`flex items-start gap-2.5 rounded-md border p-3 ${
+            isPublic
+              ? "border-profit/30 bg-profit/5"
+              : "border-warning/30 bg-warning/5"
+          }`}
+        >
+          {isPublic ? (
+            <Globe className="mt-0.5 h-4 w-4 shrink-0 text-profit" />
+          ) : (
+            <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+          )}
+          <div className="min-w-0">
+            <div
+              className={`text-xs font-semibold ${isPublic ? "text-profit" : "text-warning"}`}
+            >
+              {isPublic ? "Listed in the public directory" : "Not listed yet"}
+            </div>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+              {isPublic
+                ? "Followers can find this profile in the directory and leaderboard. Your live stats are computed from your real MT5 deals."
+                : "Listing is granted by CopyDesk once you pass Challenge 1 and your track record is verified — it isn't a switch you flip yourself. Keep your profile up to date in the meantime."}
+            </p>
+          </div>
+        </div>
+
         <button
           disabled={save.isPending}
           className="rounded-md bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40"
