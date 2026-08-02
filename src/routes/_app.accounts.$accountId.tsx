@@ -17,6 +17,9 @@ import {
 } from "recharts";
 import {
   ArrowLeft,
+  Banknote,
+  EyeOff,
+  Globe,
   Loader2,
   Pause,
   Play,
@@ -26,6 +29,7 @@ import {
   TrendingUp,
   Wallet as WalletIcon,
 } from "lucide-react";
+
 import {
   accountTradesQueryOptions,
   accountsQueryOptions,
