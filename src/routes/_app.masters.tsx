@@ -152,11 +152,8 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
         Followers: <span className="font-mono">{followers ?? "—"}</span>
       </div>
 
-      {error && (
-        <div className="mt-2 text-[10px] text-loss">
-          Couldn't load trades: {(error as Error).message}
-        </div>
-      )}
+
+
 
       <div className="mt-3 flex gap-2">
         <Link
