@@ -207,7 +207,9 @@ function LivePreviewCard() {
               : "No accounts are streaming at this moment."}
           </div>
         )}
-        {hasFeed &&
+        {data &&
+          hasFeed &&
+
           data.top.map((r) => (
             <div
               key={r.id}
