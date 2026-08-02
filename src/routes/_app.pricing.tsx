@@ -17,18 +17,36 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Check,
+  ChevronDown,
   Clock,
   Info as InfoIcon,
   Package as PackageIcon,
+  Plus,
   RefreshCw,
   ShieldAlert,
-  Sparkles,
   Wallet,
 } from "lucide-react";
 import { PatientLoader, ErrorState } from "@/components/DataState";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/pricing")({
+  head: () => ({
+    meta: [
+      { title: "Wallet & Packages — CopyDesk" },
+      {
+        name: "description",
+        content:
+          "Top up your CopyDesk wallet and activate a copy-trading package for your follower account.",
+      },
+      { property: "og:title", content: "Wallet & Packages — CopyDesk" },
+      {
+        property: "og:description",
+        content: "Top up your wallet and activate a copy-trading package.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: (search: Record<string, unknown>): { account?: string } => ({
     account: typeof search.account === "string" ? search.account : undefined,
   }),
@@ -44,9 +62,9 @@ function Pricing() {
 
   if (!account || !selected) {
     return (
-      <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-8">
+      <div className="mx-auto w-full max-w-2xl space-y-5 p-4 md:p-8">
         <Header />
-        <section className="rounded-xl border border-border bg-card p-5">
+        <section className="rounded-xl border border-border bg-card p-4 md:p-5">
           <div className="text-sm font-semibold">Pick a follower account</div>
           <p className="mt-1 text-xs text-muted-foreground">
             Wallet balance and billing are managed per follower account.
@@ -62,24 +80,24 @@ function Pricing() {
               </p>
               <Link
                 to="/onboarding"
-                className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground"
               >
                 Set one up
               </Link>
             </div>
           )}
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="mt-4 grid gap-2">
             {followers.map((f) => (
               <button
                 key={f.account_id}
                 onClick={() => navigate({ to: "/pricing", search: { account: f.account_id } })}
-                className="flex items-center justify-between rounded-lg border border-border bg-background/60 p-3 text-left transition-colors hover:border-primary/60"
+                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/60 p-3.5 text-left transition-colors active:border-primary/60 hover:border-primary/60"
               >
                 <div className="min-w-0">
                   <div className="truncate font-mono text-xs">{f.account_id}</div>
                   <div className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">
-                    Follower
+                    Follower · {f.status}
                   </div>
                 </div>
                 <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -91,7 +109,13 @@ function Pricing() {
     );
   }
 
-  return <PricingForAccount accountId={account} />;
+  return (
+    <PricingForAccount
+      accountId={account}
+      accountIds={followers.map((f) => f.account_id)}
+      onSwitch={(id) => navigate({ to: "/pricing", search: { account: id } })}
+    />
+  );
 }
 
 function Header() {
@@ -108,7 +132,15 @@ function Header() {
   );
 }
 
-function PricingForAccount({ accountId }: { accountId: string }) {
+function PricingForAccount({
+  accountId,
+  accountIds,
+  onSwitch,
+}: {
+  accountId: string;
+  accountIds: string[];
+  onSwitch: (id: string) => void;
+}) {
   const qc = useQueryClient();
   const {
     data: wallet,
@@ -147,31 +179,33 @@ function PricingForAccount({ accountId }: { accountId: string }) {
   const recommendedCode = sorted.length >= 3 ? sorted[1].code : sorted[0]?.code;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
-      <Link
-        to="/dashboard"
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-3 w-3" /> Back
-      </Link>
+    <div className="mx-auto w-full max-w-4xl space-y-5 p-4 md:p-8">
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3 w-3" /> Dashboard
+        </Link>
+        {accountIds.length > 1 && (
+          <AccountSwitcher current={accountId} ids={accountIds} onSwitch={onSwitch} />
+        )}
+      </div>
 
       <Header />
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <WalletCard
-          accountId={accountId}
-          wallet={wallet}
-          isLoading={walletLoading}
-          error={walletError}
-          className="lg:col-span-3"
-        />
-        <BillingStatusCard
-          billing={billing}
-          onReactivate={(code) => pick.mutate(code)}
-          reactivating={pick.isPending}
-          className="lg:col-span-2"
-        />
-      </div>
+      <WalletCard
+        accountId={accountId}
+        wallet={wallet}
+        isLoading={walletLoading}
+        error={walletError}
+      />
+
+      <BillingStatusCard
+        billing={billing}
+        onReactivate={(code) => pick.mutate(code)}
+        reactivating={pick.isPending}
+      />
 
       <section className="space-y-3">
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -186,7 +220,7 @@ function PricingForAccount({ accountId }: { accountId: string }) {
             No packages are available right now.
           </div>
         )}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
           {sorted.map((p) => (
             <PackageCard
               key={p.code}
@@ -207,6 +241,34 @@ function PricingForAccount({ accountId }: { accountId: string }) {
   );
 }
 
+function AccountSwitcher({
+  current,
+  ids,
+  onSwitch,
+}: {
+  current: string;
+  ids: string[];
+  onSwitch: (id: string) => void;
+}) {
+  return (
+    <label className="relative flex min-w-0 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5">
+      <span className="sr-only">Follower account</span>
+      <select
+        value={current}
+        onChange={(e) => onSwitch(e.target.value)}
+        className="max-w-[9rem] appearance-none truncate bg-transparent pr-4 font-mono text-[11px] outline-none"
+      >
+        {ids.map((id) => (
+          <option key={id} value={id}>
+            {id}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-muted-foreground" />
+    </label>
+  );
+}
+
 /* ---------------- wallet ---------------- */
 
 const QUICK_AMOUNTS = [25, 50, 100, 250];
@@ -216,13 +278,11 @@ function WalletCard({
   wallet,
   isLoading,
   error,
-  className,
 }: {
   accountId: string;
   wallet: { balance: number; in_debt: boolean } | undefined;
   isLoading: boolean;
   error: unknown;
-  className?: string;
 }) {
   const qc = useQueryClient();
   const [amount, setAmount] = useState<string>("");
@@ -246,69 +306,75 @@ function WalletCard({
   };
 
   return (
-    <section className={cn("rounded-xl border border-border bg-card p-5", className)}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-          <Wallet className="h-3.5 w-3.5" /> Wallet balance
+    <section
+      className={cn(
+        "overflow-hidden rounded-xl border bg-card",
+        wallet?.in_debt ? "border-loss/40" : "border-border",
+      )}
+    >
+      <div className="p-4 md:p-5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+            <Wallet className="h-3.5 w-3.5" /> Wallet balance
+          </div>
+          {wallet?.in_debt && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-loss/40 bg-loss/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-loss">
+              <ShieldAlert className="h-3 w-3" /> Negative
+            </span>
+          )}
         </div>
-        {wallet?.in_debt && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-loss/40 bg-loss/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-loss">
-            <ShieldAlert className="h-3 w-3" /> Negative
-          </span>
+
+        {isLoading && <PatientLoader label="Loading wallet…" compact className="mt-3" />}
+        {!!error && <ErrorState className="mt-3" message={(error as Error).message} />}
+
+        {wallet && (
+          <div className="mt-2 text-4xl font-semibold tracking-tight md:text-5xl">
+            <NumericValue value={wallet.balance} format="currency" />
+          </div>
         )}
       </div>
 
-      {isLoading && <PatientLoader label="Loading wallet…" compact className="mt-3" />}
-      {!!error && <ErrorState className="mt-3" message={(error as Error).message} />}
-
       {wallet && (
-        <>
-          <div className="mt-2 text-4xl font-semibold tracking-tight">
-            <NumericValue value={wallet.balance} format="currency" />
-          </div>
-
-          <div className="mt-5">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              Top up
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {QUICK_AMOUNTS.map((v) => (
-                <button
-                  key={v}
-                  onClick={() => submitAmount(v)}
-                  disabled={topup.isPending}
-                  className="rounded-md border border-border bg-background/60 px-3.5 py-2 text-xs font-semibold transition-colors hover:border-primary/60 disabled:opacity-40"
-                >
-                  +${v}
-                </button>
-              ))}
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitAmount(parseFloat(amount));
-              }}
-              className="mt-2 flex gap-2"
-            >
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                type="number"
-                min="1"
-                step="0.01"
-                placeholder="Custom amount"
-                className="flex-1 rounded-md border border-border bg-input px-3 py-2 font-mono text-sm outline-none focus:border-primary"
-              />
+        <div className="border-t border-border bg-background/40 p-4 md:p-5">
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Top up</div>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {QUICK_AMOUNTS.map((v) => (
               <button
-                disabled={topup.isPending || !amount}
-                className="rounded-md bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+                key={v}
+                onClick={() => submitAmount(v)}
+                disabled={topup.isPending}
+                className="flex items-center justify-center gap-1 rounded-lg border border-border bg-card py-3 text-sm font-semibold transition-colors active:border-primary hover:border-primary/60 disabled:opacity-40"
               >
-                {topup.isPending ? "Adding…" : "Add"}
+                <Plus className="h-3.5 w-3.5 text-primary" />
+                {v}
               </button>
-            </form>
+            ))}
           </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitAmount(parseFloat(amount));
+            }}
+            className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2"
+          >
+            <input
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              type="number"
+              min="1"
+              step="0.01"
+              placeholder="Custom amount"
+              className="min-w-0 rounded-lg border border-border bg-input px-3 py-3 font-mono text-sm outline-none focus:border-primary"
+            />
+            <button
+              disabled={topup.isPending || !amount}
+              className="shrink-0 rounded-lg bg-primary px-5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+            >
+              {topup.isPending ? "Adding…" : "Add"}
+            </button>
+          </form>
 
-          <div className="mt-4 flex items-start gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+          <div className="mt-3 flex items-start gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
             <InfoIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
               Payments aren't wired up to a processor yet — top-ups are applied to your balance
@@ -316,7 +382,7 @@ function WalletCard({
               test billing end-to-end.
             </span>
           </div>
-        </>
+        </div>
       )}
     </section>
   );
@@ -355,24 +421,24 @@ function WalletTransactions({ accountId }: { accountId: string }) {
             <div
               key={`${tx.created_at}-${i}`}
               className={cn(
-                "flex items-center justify-between px-3 py-2.5 text-xs",
+                "flex items-center justify-between gap-3 px-3 py-3 text-xs",
                 i !== 0 && "border-t border-border",
               )}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 {credit ? (
-                  <ArrowDownLeft className="h-3.5 w-3.5 text-profit" />
+                  <ArrowDownLeft className="h-3.5 w-3.5 shrink-0 text-profit" />
                 ) : (
-                  <ArrowUpRight className="h-3.5 w-3.5 text-loss" />
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-loss" />
                 )}
-                <div>
-                  <div className="font-medium">{labelFor(tx.type)}</div>
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{labelFor(tx.type)}</div>
                   <div className="font-mono text-[10px] text-muted-foreground">
                     {new Date(tx.created_at).toLocaleString()}
                   </div>
                 </div>
               </div>
-              <div className={cn("font-mono", credit ? "text-profit" : "text-loss")}>
+              <div className={cn("shrink-0 font-mono", credit ? "text-profit" : "text-loss")}>
                 <NumericValue value={tx.amount} format="signed" flash={false} />
               </div>
             </div>
@@ -397,7 +463,6 @@ function BillingStatusCard({
   billing,
   onReactivate,
   reactivating,
-  className,
 }: {
   billing:
     | { status: "none" }
@@ -410,26 +475,33 @@ function BillingStatusCard({
     | undefined;
   onReactivate: (code: string) => void;
   reactivating: boolean;
-  className?: string;
 }) {
+  const isGrace = !!billing && billing.status === "grace";
+  const isClosed = !!billing && billing.status === "closed";
+
   return (
-    <section className={cn("rounded-xl border border-border bg-card p-5", className)}>
+    <section
+      className={cn(
+        "rounded-xl border bg-card p-4 md:p-5",
+        isGrace ? "border-warning/40" : isClosed ? "border-loss/40" : "border-border",
+      )}
+    >
       <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
         Subscription
       </div>
 
       {(!billing || billing.status === "none") && (
-        <div className="mt-3">
-          <p className="text-xs text-muted-foreground">
-            No active package yet. Pick one below to start copying.
-          </p>
-        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          No active package yet. Pick one below to start copying.
+        </p>
       )}
 
       {billing && billing.status !== "none" && "package_code" in billing && (
-        <div className="mt-3 space-y-3">
-          <div>
-            <div className="font-mono text-lg font-semibold uppercase">{billing.package_code}</div>
+        <div className="mt-2 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-lg font-semibold uppercase">
+              {billing.package_code}
+            </span>
             <StatusPillBilling status={billing.status} />
           </div>
 
@@ -440,17 +512,17 @@ function BillingStatusCard({
             </div>
           )}
 
-          {billing.status === "grace" && (
+          {isGrace && (
             <div className="rounded-md border border-warning/40 bg-warning/10 p-2.5 text-[11px] text-warning">
               In grace period — top up your wallet so the next renewal can go through automatically.
             </div>
           )}
 
-          {billing.status === "closed" && (
+          {isClosed && (
             <button
               onClick={() => onReactivate(billing.package_code)}
               disabled={reactivating}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3.5 py-3 text-xs font-semibold text-primary-foreground disabled:opacity-40 sm:w-auto"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               {reactivating ? "Reactivating…" : "Reactivate this package"}
@@ -471,7 +543,7 @@ function StatusPillBilling({ status }: { status: string }) {
   return (
     <span
       className={cn(
-        "mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
         map[status] ?? "text-muted-foreground border-border bg-muted/30",
       )}
     >
@@ -504,7 +576,7 @@ function PackageCard({
   return (
     <div
       className={cn(
-        "relative flex flex-col rounded-xl border p-5 transition-colors",
+        "relative flex flex-col rounded-xl border p-4 transition-colors md:p-5",
         current
           ? "border-primary bg-primary/5"
           : recommended
@@ -512,47 +584,48 @@ function PackageCard({
             : "border-border bg-card",
       )}
     >
-      {recommended && !current && (
-        <span className="absolute -top-2.5 left-5 rounded-full border border-primary/40 bg-primary px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary-foreground">
-          Recommended
-        </span>
-      )}
-      {current && (
-        <span className="absolute -top-2.5 left-5 flex items-center gap-1 rounded-full border border-primary/40 bg-primary px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary-foreground">
-          <Check className="h-2.5 w-2.5" /> Current plan
-        </span>
-      )}
-
-      <div className="font-mono text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {pkg.code}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+        <div className="min-w-0">
+          <div className="truncate font-mono text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {pkg.code}
+          </div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
+            <span className="text-3xl font-semibold">
+              <NumericValue value={total} format="currency" flash={false} />
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              / {pkg.duration_days}-day cycle
+            </span>
+          </div>
+        </div>
+        {current ? (
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-primary/40 bg-primary px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary-foreground">
+            <Check className="h-2.5 w-2.5" /> Current
+          </span>
+        ) : recommended ? (
+          <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary">
+            Popular
+          </span>
+        ) : null}
       </div>
 
-      <div className="mt-2 flex items-baseline gap-1">
-        <span className="text-3xl font-semibold">
-          <NumericValue value={total} format="currency" flash={false} />
-        </span>
-        <span className="text-xs text-muted-foreground">/ {pkg.duration_days}-day cycle</span>
-      </div>
-
-      <ul className="mt-4 space-y-2 text-xs">
-        <Feature>
-          Roster of up to <span className="font-semibold">{pkg.base_roster_size}</span>{" "}
-          {pkg.base_roster_size === 1 ? "master" : "masters"}
-        </Feature>
-        <Feature>
-          <NumericValue value={pkg.infra_fee} format="currency" flash={false} /> infra fee per cycle
-        </Feature>
-        <Feature>
-          <NumericValue value={pkg.slot_fee_per_slot} format="currency" flash={false} /> per roster
-          slot
-        </Feature>
-      </ul>
+      <dl className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border text-center">
+        <Spec label="Roster" value={String(pkg.base_roster_size)} />
+        <Spec
+          label="Infra"
+          value={<NumericValue value={pkg.infra_fee} format="currency" flash={false} />}
+        />
+        <Spec
+          label="Per slot"
+          value={<NumericValue value={pkg.slot_fee_per_slot} format="currency" flash={false} />}
+        />
+      </dl>
 
       <div className="flex-1" />
 
       {insufficientFunds && !current && (
-        <div className="mt-4 flex items-center gap-1.5 text-[10px] text-warning">
-          <ShieldAlert className="h-3 w-3" /> Balance is below the cycle cost
+        <div className="mt-3 flex items-center gap-1.5 text-[10px] text-warning">
+          <ShieldAlert className="h-3 w-3 shrink-0" /> Balance is below the cycle cost
         </div>
       )}
 
@@ -560,7 +633,7 @@ function PackageCard({
         onClick={onSelect}
         disabled={pending || (current && !closed)}
         className={cn(
-          "mt-4 w-full rounded-md py-2.5 text-xs font-semibold disabled:opacity-40",
+          "mt-3 w-full rounded-lg py-3 text-xs font-semibold disabled:opacity-40",
           current && !closed
             ? "border border-primary/40 bg-primary/10 text-primary"
             : "bg-primary text-primary-foreground",
@@ -580,11 +653,11 @@ function PackageCard({
   );
 }
 
-function Feature({ children }: { children: React.ReactNode }) {
+function Spec({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <li className="flex items-start gap-2 text-muted-foreground">
-      <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
-      <span>{children}</span>
-    </li>
+    <div className="bg-card px-2 py-2.5">
+      <dt className="text-[9px] uppercase tracking-widest text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-mono text-xs">{value}</dd>
+    </div>
   );
 }
