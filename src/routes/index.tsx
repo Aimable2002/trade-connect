@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { formatLatency, publicStatsQueryOptions } from "@/lib/public-stats";
 import {
   Activity,
   ArrowRight,
@@ -16,6 +18,7 @@ import {
 export const Route = createFileRoute("/")({
   component: Landing,
 });
+
 
 function Landing() {
   const navigate = useNavigate();
