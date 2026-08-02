@@ -749,7 +749,102 @@ function MasterEarningsPanel({ accountId }: { accountId: string }) {
   );
 }
 
+/**
+ * Payout requests aren't wired to a backend route yet — this card is the
+ * agreed UI surface for the master's withdrawable balance, and the request
+ * action is intentionally a stub until the endpoint exists.
+ */
+const PAYOUT_MINIMUM = 50;
+
+function MasterPayoutCard({ accountId }: { accountId: string }) {
+  const { data, isLoading } = useQuery(masterEarningsQueryOptions(accountId));
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+
+  const available = data?.total_earned ?? 0;
+  const canRequest = available >= PAYOUT_MINIMUM;
+
+  return (
+    <section className="rounded-lg border border-border bg-card p-4">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+        <Banknote className="h-3 w-3" /> Payouts
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div className="min-w-0">
+          <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
+            Earned balance
+          </div>
+          <div className="mt-1 text-3xl font-semibold">
+            {isLoading ? (
+              <span className="text-muted-foreground/60">…</span>
+            ) : (
+              <NumericValue value={available} format="currency" flash={false} />
+            )}
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Profit share credited from your followers. Minimum payout $
+            {PAYOUT_MINIMUM}.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setAmount(available.toFixed(2));
+            setOpen(true);
+          }}
+          disabled={!canRequest}
+          className="shrink-0 rounded-md bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+        >
+          Request payout
+        </button>
+      </div>
+
+      {!isLoading && !canRequest && (
+        <div className="mt-3 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+          You need at least{" "}
+          <NumericValue value={PAYOUT_MINIMUM} format="currency" flash={false} /> in earnings before
+          a payout can be requested.
+        </div>
+      )}
+
+      <Modal open={open} onClose={() => setOpen(false)} title="Request a payout">
+        <p className="text-xs text-muted-foreground">
+          Withdraw your credited profit share. Requests are reviewed by CopyDesk before funds are
+          released.
+        </p>
+        <label className="mt-4 block">
+          <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Amount</span>
+          <input
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            inputMode="decimal"
+            className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 font-mono text-sm outline-none focus:border-primary"
+          />
+        </label>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={() => setOpen(false)}
+            className="rounded border border-border px-3 py-1.5 text-xs text-muted-foreground"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              setOpen(false);
+              toast.info("Payout requests aren't live yet — this is a preview of the flow.");
+            }}
+            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+          >
+            Submit request
+          </button>
+        </div>
+      </Modal>
+    </section>
+  );
+}
+
 /* ---------------- follower ---------------- */
+
 
 function FollowerSections({ accountId }: { accountId: string }) {
   return (
