@@ -145,74 +145,200 @@ function Hero() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
-            <span>Live preview</span>
-            <span className="flex items-center gap-1 text-profit">
-              <span className="h-1.5 w-1.5 rounded-full bg-profit" /> Streaming
-            </span>
-          </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <div className="text-2xl font-semibold">$12,480.55</div>
-            <div className="font-mono text-sm text-profit">+4.2%</div>
-          </div>
-          <div className="mt-4 h-24 w-full overflow-hidden rounded-md bg-muted/30">
-            <svg viewBox="0 0 300 100" className="h-full w-full" preserveAspectRatio="none">
-              <polyline
-                fill="none"
-                stroke="var(--profit)"
-                strokeWidth="2"
-                points="0,80 30,72 60,76 90,55 120,60 150,40 180,46 210,28 240,34 270,18 300,22"
-              />
-            </svg>
-          </div>
-          <div className="mt-4 space-y-2">
-            {[
-              { m: "Nova FX", pct: "+1.8%", pos: true },
-              { m: "Apex Scalper", pct: "-0.4%", pos: false },
-              { m: "Delta Swing", pct: "+2.1%", pos: true },
-            ].map((r) => (
-              <div
-                key={r.m}
-                className="flex items-center justify-between rounded-md border border-border bg-background/60 px-3 py-2 text-xs"
-              >
-                <span>{r.m}</span>
-                <span className={r.pos ? "font-mono text-profit" : "font-mono text-loss"}>
-                  {r.pct}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <LivePreviewCard />
       </div>
     </section>
+  );
+}
+
+function LivePreviewCard() {
+  const { data, isLoading, isError } = useQuery(publicStatsQueryOptions());
+  const hasFeed = !!data && data.top.length > 0;
+  const pct = data?.followerReturnPct ?? null;
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
+        <span>Live feed</span>
+        <span
+          className={`flex items-center gap-1 ${hasFeed ? "text-profit" : "text-muted-foreground"}`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${hasFeed ? "animate-pulse bg-profit" : "bg-muted-foreground"}`}
+          />
+          {isLoading ? "Connecting" : hasFeed ? "Streaming" : "Idle"}
+        </span>
+      </div>
+
+      <div className="mt-3 flex items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-2xl font-semibold">
+            {data?.totalEquity != null
+              ? data.totalEquity.toLocaleString(undefined, {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 0,
+                })
+              : "—"}
+          </div>
+          <div className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Equity tracked on platform
+          </div>
+        </div>
+        <div
+          className={`shrink-0 font-mono text-sm ${
+            pct == null ? "text-muted-foreground" : pct >= 0 ? "text-profit" : "text-loss"
+          }`}
+        >
+          {pct == null ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`}
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {isLoading && (
+          <div className="rounded-md border border-border bg-background/60 px-3 py-6 text-center text-xs text-muted-foreground">
+            Reading the live feed…
+          </div>
+        )}
+        {!isLoading && !hasFeed && (
+          <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
+            {isError
+              ? "Live figures are private right now — sign in to see your own."
+              : "No accounts are streaming at this moment."}
+          </div>
+        )}
+        {hasFeed &&
+          data.top.map((r) => (
+            <div
+              key={r.id}
+              className="flex items-center justify-between rounded-md border border-border bg-background/60 px-3 py-2 text-xs"
+            >
+              <span className="truncate font-mono">{r.label}</span>
+              <span className={`font-mono ${r.abs >= 0 ? "text-profit" : "text-loss"}`}>
+                {r.pct == null
+                  ? `${r.abs >= 0 ? "+" : ""}${r.abs.toFixed(2)}`
+                  : `${r.pct >= 0 ? "+" : ""}${r.pct.toFixed(2)}%`}
+              </span>
+            </div>
+          ))}
+      </div>
+
+      <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
+        Open-position return on live CopyDesk accounts, read straight from the terminal feed. Not a
+        simulation.
+      </p>
+    </div>
   );
 }
 
 /* ---------------- stats ---------------- */
 
 function StatsStrip() {
+  const { data, isLoading } = useQuery(publicStatsQueryOptions());
+
+  const followerPnl = data?.followerReturnAbs ?? null;
   const stats = [
-    { k: "AVG LATENCY", v: "180ms" },
-    { k: "UPTIME", v: "99.94%" },
-    { k: "MASTERS", v: "142" },
-    { k: "SUPPORTED BROKERS", v: "MT5" },
+    {
+      k: "Feed latency",
+      v: isLoading ? "…" : formatLatency(data?.feedLatencyMs ?? null),
+      hint: "Median age of live state",
+    },
+    {
+      k: "Follower P&L from signals",
+      v:
+        followerPnl == null
+          ? "—"
+          : `${followerPnl >= 0 ? "+" : ""}${followerPnl.toLocaleString(undefined, {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 0,
+            })}`,
+      hint: "Open copied positions",
+      accent: followerPnl == null ? undefined : followerPnl >= 0 ? "profit" : "loss",
+    },
+    {
+      k: "Masters",
+      v: isLoading ? "…" : data ? String(data.masters) : "—",
+      hint: "Strategies on the platform",
+    },
+    {
+      k: "Live accounts",
+      v: isLoading ? "…" : data ? String(data.liveAccounts) : "—",
+      hint: "Terminals streaming now",
+    },
   ];
+
   return (
     <section className="border-y border-border bg-card/40">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px overflow-hidden border-x border-border bg-border md:grid-cols-4 md:px-8">
         {stats.map((s) => (
           <div key={s.k} className="bg-background/60 p-5 text-center">
-            <div className="font-mono text-xl font-semibold md:text-2xl">{s.v}</div>
+            <div
+              className={`font-mono text-xl font-semibold md:text-2xl ${
+                s.accent === "profit" ? "text-profit" : s.accent === "loss" ? "text-loss" : ""
+              }`}
+            >
+              {s.v}
+            </div>
             <div className="mt-1 text-[9px] uppercase tracking-widest text-muted-foreground">
               {s.k}
             </div>
+            <div className="mt-0.5 text-[9px] text-muted-foreground/70">{s.hint}</div>
           </div>
         ))}
       </div>
     </section>
   );
 }
+
+/* ---------------- brokers ---------------- */
+
+const BROKERS = [
+  "IC Markets",
+  "Pepperstone",
+  "Exness",
+  "FTMO",
+  "Vantage",
+  "RoboForex",
+  "XM",
+  "Tickmill",
+  "FxPro",
+  "Admirals",
+  "Eightcap",
+  "BlackBull",
+];
+
+function Brokers() {
+  return (
+    <section className="border-t border-border">
+      <div className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-24">
+        <SectionHeading
+          eyebrow="Compatibility"
+          title="Works with any broker that gives you MT5 credentials"
+        />
+        <p className="mx-auto mt-3 max-w-xl text-center text-xs text-muted-foreground">
+          CopyDesk provisions its own MetaTrader 5 terminal against your login, so broker support is
+          simply "does it offer MT5". These are the ones our users run most often.
+        </p>
+        <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3 lg:grid-cols-4">
+          {BROKERS.map((b) => (
+            <div
+              key={b}
+              className="flex items-center gap-2 bg-card px-4 py-3.5 text-xs text-muted-foreground"
+            >
+              <Cable className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span className="truncate">{b}</span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
+          Broker not listed? If it ships MT5, it works.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 
 /* ---------------- how it works ---------------- */
 
