@@ -57,7 +57,9 @@ function Landing() {
       <StatsStrip />
       <HowItWorks />
       <Features />
+      <Brokers />
       <PricingPreview />
+
       <FinalCta />
       <Footer />
     </div>
