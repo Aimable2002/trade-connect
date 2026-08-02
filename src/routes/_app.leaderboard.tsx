@@ -87,11 +87,15 @@ function Leaderboard() {
   }, [masters, tradeResults, subs]);
 
   const ranked = useMemo(() => {
-    const withData = rows.filter((r) => r.pnl !== null);
-    const withoutData = rows.filter((r) => r.pnl === null);
+    // Masters whose deals failed to load, or who have no closed history at
+    // all, are dropped instead of rendering a row full of "err" / "—".
+    const usable = rows.filter((r) => !r.error && (r.loading || r.pnl !== null));
+    const withData = usable.filter((r) => r.pnl !== null);
+    const withoutData = usable.filter((r) => r.pnl === null);
     withData.sort((a, b) => (b.pnl ?? 0) - (a.pnl ?? 0));
     return [...withData, ...withoutData];
   }, [rows]);
+
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-8">
