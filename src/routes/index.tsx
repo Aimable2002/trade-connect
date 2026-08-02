@@ -239,7 +239,7 @@ function StatsStrip() {
   const { data, isLoading } = useQuery(publicStatsQueryOptions());
 
   const followerPnl = data?.followerReturnAbs ?? null;
-  const stats = [
+  const stats: { k: string; v: string; hint: string; accent?: "profit" | "loss" }[] = [
     {
       k: "Feed latency",
       v: isLoading ? "…" : formatLatency(data?.feedLatencyMs ?? null),
