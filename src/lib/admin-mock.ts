@@ -44,7 +44,8 @@ export interface PayoutRequest {
   masterName: string;
   amount: number;
   requestedAt: string;
-  status: "pending" | "approved" | "rejected";
+  // Mirrors the real `master_payouts` table, which only has these two states.
+  status: "pending" | "paid";
 }
 
 export interface TopMasterRow {
