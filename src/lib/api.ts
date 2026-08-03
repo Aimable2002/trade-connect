@@ -154,10 +154,11 @@ export const closeAccount = (accountId: string) =>
 
 // -------- Master profile / directory --------
 
+// `is_public` is platform-derived (granted once a master is verified), never
+// master-set, so it is deliberately absent from the writable input shape.
 export interface MasterProfileInput {
   display_name: string;
   bio?: string;
-  is_public: boolean;
 }
 
 export interface MasterProfile {
