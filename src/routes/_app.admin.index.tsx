@@ -289,36 +289,6 @@ function AdminDashboard() {
 
       <UserManagement />
 
-      <Panel title="Platform read-out">
-        <ul className="space-y-2 text-xs leading-relaxed text-muted-foreground">
-          <Insight>
-            Profit share is the fastest-growing stream — it now contributes{" "}
-            <strong className="text-foreground">
-              {Math.round(
-                (s.revenue[s.revenue.length - 1].profitShare / totals.mrr) * 100,
-              )}
-              %
-            </strong>{" "}
-            of monthly revenue, so master quality drives the P&amp;L more than seat count does.
-          </Insight>
-          <Insight>
-            <strong className="text-foreground">{totals.atRisk}</strong> follower wallets are in
-            debt or grace. Every one of them stops generating slot fees until it's topped up —
-            chase these before acquiring new followers.
-          </Insight>
-          <Insight>
-            Execution clusters in the London/New York overlap. Off-session infra can be scaled down
-            without touching fill quality.
-          </Insight>
-          <Insight>
-            Followers per master averages{" "}
-            <strong className="text-foreground">
-              {(totals.followers / Math.max(totals.masters, 1)).toFixed(1)}
-            </strong>
-            . Graduating more challengers is the cheapest way to lift capacity.
-          </Insight>
-        </ul>
-      </Panel>
     </div>
   );
 }
