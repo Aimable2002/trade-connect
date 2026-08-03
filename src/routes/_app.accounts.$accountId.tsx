@@ -36,7 +36,6 @@ import {
   billingQueryOptions,
   masterEarningsQueryOptions,
   masterProfileQueryOptions,
-  masterRateQueryOptions,
   mastersDirectoryQueryOptions,
   rosterQueryOptions,
   walletQueryOptions,
@@ -46,10 +45,8 @@ import {
   ApiError,
   closeAccount,
   pauseAccount,
-  PLATFORM_FEE_OF_MASTER_CUT_PCT,
   reactivateBilling,
   resumeAccount,
-  setMasterRate,
   switchMaster,
   upsertMasterProfile,
 } from "@/lib/api";
