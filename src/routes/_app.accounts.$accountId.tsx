@@ -474,19 +474,19 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
 
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
-  const [isPublic, setIsPublic] = useState(false);
+  // Read-only: listing is granted by the platform, never set here.
+  const isPublic = profile?.is_public ?? false;
 
   // useState's initializer only runs once, at mount - it can't react to
   // `profile` arriving later from the query above, which is the normal
   // case (the query is still loading on first render). Without this
-  // effect, the fields would stay permanently blank/unchecked even after
+  // effect, the fields would stay permanently blank even after
   // real data loads, which was the actual bug: it wasn't that the data
   // wasn't fetched, it's that fetching it after mount had nowhere to go.
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name ?? "");
       setBio(profile.bio ?? "");
-      setIsPublic(profile.is_public);
     }
   }, [profile]);
 
@@ -495,7 +495,6 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
       upsertMasterProfile(accountId, {
         display_name: displayName.trim(),
         bio: bio.trim() || undefined,
-        is_public: isPublic,
       }),
     onSuccess: () => {
       toast.success("Profile saved.");
