@@ -261,7 +261,7 @@ function MasterSections({ accountId }: { accountId: string }) {
       <MasterEarningsPanel accountId={accountId} />
       <MasterPayoutCard accountId={accountId} />
 
-      <ChallengeStatusPanel />
+      <ChallengeStatusPanel accountId={accountId} />
     </>
   );
 }
