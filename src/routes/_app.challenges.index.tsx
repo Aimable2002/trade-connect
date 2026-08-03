@@ -19,7 +19,7 @@ import {
   CriteriaSummary,
   type ChallengeStatus,
 } from "@/components/challenges/ChallengeBits";
-import { DataState } from "@/components/DataState";
+import { ErrorState, PatientLoader } from "@/components/DataState";
 
 export const Route = createFileRoute("/_app/challenges/")({
   head: () => ({
@@ -153,13 +153,18 @@ function ChallengesPage() {
         </div>
       )}
 
-      <DataState
-        isLoading={challengesQ.isLoading}
-        error={challengesQ.error as Error | null}
-        isEmpty={!challengesQ.isLoading && challenges.length === 0}
-        emptyText="No challenges published yet."
-        loadingText="Loading challenges…"
-      >
+      {challengesQ.isLoading && <PatientLoader label="Loading challenges…" />}
+      {challengesQ.error && (
+        <ErrorState
+          message={(challengesQ.error as Error).message}
+          onRetry={() => challengesQ.refetch()}
+        />
+      )}
+      {!challengesQ.isLoading && !challengesQ.error && challenges.length === 0 && (
+        <div className="rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground">
+          No challenges published yet.
+        </div>
+      )}
         <div className="grid gap-4 md:grid-cols-2">
           {challenges.map((c) => {
             const status = statusFor(c);
@@ -247,7 +252,6 @@ function ChallengesPage() {
             );
           })}
         </div>
-      </DataState>
     </div>
   );
 }
