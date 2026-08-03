@@ -350,15 +350,6 @@ function Panel({
   );
 }
 
-function Insight({ children }: { children: React.ReactNode }) {
-  return (
-    <li className="flex gap-2">
-      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary" />
-      <span>{children}</span>
-    </li>
-  );
-}
-
 function Heatmap({ grid }: { grid: number[][] }) {
   const max = Math.max(...grid.flat(), 1);
   return (
