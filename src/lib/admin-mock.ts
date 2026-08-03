@@ -213,7 +213,7 @@ export const adminMock = {
   get() {
     return state;
   },
-  resolvePayout(id: string, status: "approved" | "rejected") {
+  resolvePayout(id: string, status: PayoutRequest["status"]) {
     setState({
       ...state,
       payouts: state.payouts.map((p) => (p.id === id ? { ...p, status } : p)),
