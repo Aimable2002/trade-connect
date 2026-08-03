@@ -7,6 +7,9 @@ import {
 } from "./supabase";
 import {
   getAccountTrades,
+  getChallengeHistory,
+  getChallengeStatus,
+  getChallenges,
   getBilling,
   getMasterEarnings,
   getMasterProfile,
@@ -18,6 +21,9 @@ import {
   getWalletTransactions,
   ApiError,
   type Billing,
+  type Challenge,
+  type ChallengeHistoryResponse,
+  type ChallengeStatusResponse,
   type Deal,
   type DirectoryMaster,
   type MasterEarnings,
@@ -190,4 +196,29 @@ export const packagesQueryOptions = () =>
       return (data ?? []) as Package[];
     },
     staleTime: 5 * 60_000,
+  });
+
+export const challengesQueryOptions = () =>
+  queryOptions({
+    queryKey: ["challenges"],
+    queryFn: (): Promise<Challenge[]> => getChallenges(),
+    staleTime: 60_000,
+  });
+
+export const challengeStatusQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["masters", accountId, "challenges", "status"],
+    enabled: !!accountId,
+    queryFn: (): Promise<ChallengeStatusResponse> =>
+      getChallengeStatus(accountId as string),
+    staleTime: 15_000,
+  });
+
+export const challengeHistoryQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["masters", accountId, "challenges", "history"],
+    enabled: !!accountId,
+    queryFn: (): Promise<ChallengeHistoryResponse> =>
+      getChallengeHistory(accountId as string),
+    staleTime: 30_000,
   });

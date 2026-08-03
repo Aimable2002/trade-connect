@@ -394,3 +394,91 @@ export const getMasterTrades = (accountId: string) =>
     method: "GET",
     timeoutMs: 20_000,
   });
+// -------- Challenges --------
+
+/**
+ * `criteria` is a jsonb column with no fixed schema: admins can define
+ * arbitrary criterion keys, so this stays an open record rather than a
+ * closed interface. Rendering helpers live in `lib/challenges.ts`.
+ */
+export type ChallengeCriteria = Record<string, unknown>;
+
+export interface Challenge {
+  id: string;
+  name: string;
+  description: string | null;
+  is_fixed: boolean;
+  criteria: ChallengeCriteria;
+  reward_amount: number;
+  active: boolean;
+  created_at: string;
+}
+
+export interface ChallengeEnrollment {
+  id: string;
+  master_account_id: string;
+  challenge_id: string;
+  status?: string | null;
+  enrolled_at?: string | null;
+  left_at?: string | null;
+  challenge?: Challenge | null;
+  challenge_name?: string | null;
+}
+
+export type ChallengePhase = "challenger" | "graduated";
+
+export interface ChallengeStatusResponse {
+  master_account_id: string;
+  phase: ChallengePhase;
+  current_enrollment: ChallengeEnrollment | null;
+}
+
+export interface ChallengeMonthlyResult {
+  id: string;
+  master_account_id: string;
+  challenge_id: string;
+  challenge_name: string | null;
+  period?: string | null;
+  passed?: boolean | null;
+  reward_paid?: number | null;
+  metrics?: Record<string, unknown> | null;
+  note?: string | null;
+  created_at?: string | null;
+}
+
+export interface ChallengeHistoryResponse {
+  master_account_id: string;
+  enrollments: ChallengeEnrollment[];
+  monthly_results: ChallengeMonthlyResult[];
+}
+
+export const getChallenges = () =>
+  authedFetch<{ challenges: Challenge[] }>(`/challenges`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  }).then((r) => r.challenges ?? []);
+
+export const enrollInChallenge = (accountId: string, challenge_id: string) =>
+  authedFetch<ChallengeEnrollment>(`/masters/${accountId}/challenges/enroll`, {
+    method: "POST",
+    body: { challenge_id },
+    timeoutMs: 20_000,
+  });
+
+export const leaveChallenge = (accountId: string, challengeId: string) =>
+  authedFetch<ChallengeEnrollment>(
+    `/masters/${accountId}/challenges/${challengeId}/leave`,
+    { method: "POST", timeoutMs: 20_000 },
+  );
+
+export const getChallengeStatus = (accountId: string) =>
+  authedFetch<ChallengeStatusResponse>(
+    `/masters/${accountId}/challenges/status`,
+    { method: "GET", timeoutMs: 15_000 },
+  );
+
+export const getChallengeHistory = (accountId: string) =>
+  authedFetch<ChallengeHistoryResponse>(
+    `/masters/${accountId}/challenges/history`,
+    { method: "GET", timeoutMs: 15_000 },
+  );
