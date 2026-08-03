@@ -1,4 +1,4 @@
-import type { Challenge, ChallengeCriteria } from "./api";
+import type { ChallengeCriteria } from "./api";
 
 /**
  * Criteria come from a jsonb column an admin can extend at will, so nothing
@@ -56,21 +56,4 @@ export function criteriaEntries(
 ): Array<[string, unknown]> {
   if (!criteria || typeof criteria !== "object") return [];
   return Object.entries(criteria);
-}
-
-export function CriteriaSummary({ challenge }: { challenge: Challenge }) {
-  const entries = criteriaEntries(challenge.criteria);
-  if (entries.length === 0) {
-    return <div className="text-xs text-muted-foreground">No criteria set.</div>;
-  }
-  return (
-    <ul className="space-y-1">
-      {entries.map(([k, v]) => (
-        <li key={k} className="flex items-center justify-between gap-2 text-xs">
-          <span className="text-muted-foreground">{criterionLabel(k)}</span>
-          <span className="font-mono">{formatCriterionValue(k, v)}</span>
-        </li>
-      ))}
-    </ul>
-  );
 }
