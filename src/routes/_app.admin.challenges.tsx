@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, Plus } from "lucide-react";
-import type { Challenge, ChallengeCriteria } from "@/lib/challenges-mock";
-import { challengeMock, useChallengeMock } from "@/lib/challenges-mock";
-import { CriteriaSummary, ChallengeStatusBadge } from "@/components/challenges/ChallengeBits";
-import { PlaceholderBanner } from "@/components/PlaceholderBanner";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Plus, X } from "lucide-react";
+import { toast } from "sonner";
+import type { Challenge, ChallengeCriteria } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
+import { challengesQueryOptions } from "@/lib/queries";
+import { CriteriaSummary } from "@/components/challenges/ChallengeBits";
+import { ErrorState, PatientLoader } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
 
 export const Route = createFileRoute("/_app/admin/challenges")({
@@ -28,15 +31,25 @@ export const Route = createFileRoute("/_app/admin/challenges")({
   component: AdminChallengesPage,
 });
 
+const PREDEFINED = [
+  { key: "winRatePct", label: "Min win rate (%)" },
+  { key: "profitFactor", label: "Min profit factor" },
+  { key: "maxDrawdownPct", label: "Max drawdown (%)" },
+  { key: "referrals", label: "Min referrals" },
+] as const;
+
+interface CustomRow {
+  label: string;
+  value: string;
+}
+
 interface Draft {
   id: string;
   name: string;
   description: string;
   rewardAmount: string;
-  winRatePct: string;
-  profitFactor: string;
-  maxDrawdownPct: string;
-  referrals: string;
+  predefined: Record<string, string>;
+  custom: CustomRow[];
 }
 
 const emptyDraft = (): Draft => ({
@@ -44,50 +57,94 @@ const emptyDraft = (): Draft => ({
   name: "",
   description: "",
   rewardAmount: "",
-  winRatePct: "",
-  profitFactor: "",
-  maxDrawdownPct: "",
-  referrals: "",
+  predefined: {},
+  custom: [],
 });
 
 function toDraft(c: Challenge): Draft {
+  const predefinedKeys = PREDEFINED.map((p) => p.key) as readonly string[];
+  const predefined: Record<string, string> = {};
+  const custom: CustomRow[] = [];
+  for (const [k, v] of Object.entries(c.criteria ?? {})) {
+    if (predefinedKeys.includes(k)) predefined[k] = String(v ?? "");
+    else custom.push({ label: k, value: String(v ?? "") });
+  }
   return {
     id: c.id,
     name: c.name,
-    description: c.description,
-    rewardAmount: String(c.rewardAmount),
-    winRatePct: c.criteria.winRatePct?.toString() ?? "",
-    profitFactor: c.criteria.profitFactor?.toString() ?? "",
-    maxDrawdownPct: c.criteria.maxDrawdownPct?.toString() ?? "",
-    referrals: c.criteria.referrals?.toString() ?? "",
+    description: c.description ?? "",
+    rewardAmount: String(c.reward_amount ?? ""),
+    predefined,
+    custom,
   };
 }
 
+/** Numeric-looking values are stored as numbers so thresholds stay comparable. */
+function coerce(value: string): string | number {
+  const trimmed = value.trim();
+  if (trimmed !== "" && !Number.isNaN(Number(trimmed))) return Number(trimmed);
+  return trimmed;
+}
+
 function AdminChallengesPage() {
-  const state = useChallengeMock();
+  const qc = useQueryClient();
+  const { data, isLoading, error, refetch } = useQuery(challengesQueryOptions());
   const [draft, setDraft] = useState<Draft | null>(null);
 
-  const save = () => {
-    if (!draft) return;
-    const criteria: ChallengeCriteria = {};
-    if (draft.winRatePct) criteria.winRatePct = Number(draft.winRatePct);
-    if (draft.profitFactor) criteria.profitFactor = Number(draft.profitFactor);
-    if (draft.maxDrawdownPct) criteria.maxDrawdownPct = Number(draft.maxDrawdownPct);
-    if (draft.referrals) criteria.referrals = Number(draft.referrals);
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["challenges"] });
 
-    const existing = state.challenges.find((c) => c.id === draft.id);
-    challengeMock.upsertChallenge({
-      id: draft.id || `ch-${Date.now()}`,
-      name: draft.name || "Untitled challenge",
-      description: draft.description,
-      isFixed: existing?.isFixed ?? false,
-      criteria,
-      rewardAmount: Number(draft.rewardAmount) || 0,
-      active: existing?.active ?? true,
-      status: existing?.status ?? "locked",
-    });
-    setDraft(null);
-  };
+  const save = useMutation({
+    mutationFn: async (d: Draft) => {
+      const criteria: ChallengeCriteria = {};
+      for (const p of PREDEFINED) {
+        const raw = d.predefined[p.key];
+        if (raw != null && raw.trim() !== "") criteria[p.key] = coerce(raw);
+      }
+      for (const row of d.custom) {
+        const key = row.label.trim();
+        if (!key) continue;
+        criteria[key] = coerce(row.value);
+      }
+      const payload = {
+        name: d.name.trim() || "Untitled challenge",
+        description: d.description.trim() || null,
+        criteria,
+        reward_amount: Number(d.rewardAmount) || 0,
+      };
+      if (d.id) {
+        const { error: e } = await supabase
+          .from("challenges")
+          .update(payload)
+          .eq("id", d.id);
+        if (e) throw e;
+      } else {
+        const { error: e } = await supabase
+          .from("challenges")
+          .insert({ ...payload, is_fixed: false, active: true });
+        if (e) throw e;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Challenge saved.");
+      setDraft(null);
+      invalidate();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const toggleActive = useMutation({
+    mutationFn: async (c: Challenge) => {
+      const { error: e } = await supabase
+        .from("challenges")
+        .update({ active: !c.active })
+        .eq("id", c.id);
+      if (e) throw e;
+    },
+    onSuccess: invalidate,
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const challenges = data ?? [];
 
   return (
     <div className="space-y-4 p-4">
@@ -111,10 +168,11 @@ function AdminChallengesPage() {
         </button>
       </header>
 
-      <PlaceholderBanner text="Mock data — edits live in memory only and reset on reload." />
+      {isLoading && <PatientLoader label="Loading challenges…" />}
+      {error && <ErrorState message={(error as Error).message} onRetry={() => refetch()} />}
 
       <div className="space-y-3">
-        {state.challenges.map((c) => (
+        {challenges.map((c) => (
           <article
             key={c.id}
             className="rounded-lg border border-border bg-card p-4 md:flex md:items-start md:gap-6"
@@ -122,7 +180,11 @@ function AdminChallengesPage() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-sm font-semibold">{c.name}</h2>
-                <ChallengeStatusBadge status={c.status} />
+                {c.is_fixed && (
+                  <span className="rounded border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    mandatory
+                  </span>
+                )}
                 <span
                   className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest ${
                     c.active
@@ -133,9 +195,11 @@ function AdminChallengesPage() {
                   {c.active ? "active" : "inactive"}
                 </span>
               </div>
-              <p className="mt-1.5 text-xs text-muted-foreground">{c.description}</p>
+              {c.description && (
+                <p className="mt-1.5 text-xs text-muted-foreground">{c.description}</p>
+              )}
               <div className="mt-2 font-mono text-xs text-profit">
-                ${c.rewardAmount.toLocaleString()}/mo
+                ${Number(c.reward_amount ?? 0).toLocaleString()}/mo
               </div>
             </div>
 
@@ -156,8 +220,9 @@ function AdminChallengesPage() {
                 Edit
               </button>
               <button
-                onClick={() => challengeMock.toggleActive(c.id)}
-                className="rounded border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                disabled={toggleActive.isPending}
+                onClick={() => toggleActive.mutate(c)}
+                className="rounded border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
               >
                 {c.active ? "Deactivate" : "Activate"}
               </button>
@@ -195,31 +260,73 @@ function AdminChallengesPage() {
                   onChange={(v) => setDraft({ ...draft, rewardAmount: v })}
                 />
               </Field>
-              <Field label="Min win rate (%)">
-                <NumInput
-                  value={draft.winRatePct}
-                  onChange={(v) => setDraft({ ...draft, winRatePct: v })}
-                />
-              </Field>
-              <Field label="Min profit factor">
-                <NumInput
-                  value={draft.profitFactor}
-                  onChange={(v) => setDraft({ ...draft, profitFactor: v })}
-                />
-              </Field>
-              <Field label="Max drawdown (%)">
-                <NumInput
-                  value={draft.maxDrawdownPct}
-                  onChange={(v) => setDraft({ ...draft, maxDrawdownPct: v })}
-                />
-              </Field>
-              <Field label="Min referrals">
-                <NumInput
-                  value={draft.referrals}
-                  onChange={(v) => setDraft({ ...draft, referrals: v })}
-                />
-              </Field>
+              {PREDEFINED.map((p) => (
+                <Field key={p.key} label={p.label}>
+                  <NumInput
+                    value={draft.predefined[p.key] ?? ""}
+                    onChange={(v) =>
+                      setDraft({
+                        ...draft,
+                        predefined: { ...draft.predefined, [p.key]: v },
+                      })
+                    }
+                  />
+                </Field>
+              ))}
             </div>
+
+            <div>
+              <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
+                Custom criteria
+              </div>
+              <div className="mt-1.5 space-y-2">
+                {draft.custom.map((row, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      placeholder="Label"
+                      className="min-w-0 flex-1 rounded border border-border bg-background px-2 py-1.5 text-sm"
+                      value={row.label}
+                      onChange={(e) => {
+                        const custom = [...draft.custom];
+                        custom[i] = { ...row, label: e.target.value };
+                        setDraft({ ...draft, custom });
+                      }}
+                    />
+                    <input
+                      placeholder="Value"
+                      className="w-28 shrink-0 rounded border border-border bg-background px-2 py-1.5 font-mono text-sm"
+                      value={row.value}
+                      onChange={(e) => {
+                        const custom = [...draft.custom];
+                        custom[i] = { ...row, value: e.target.value };
+                        setDraft({ ...draft, custom });
+                      }}
+                    />
+                    <button
+                      aria-label="Remove criterion"
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          custom: draft.custom.filter((_, j) => j !== i),
+                        })
+                      }
+                      className="shrink-0 rounded border border-border p-1.5 text-muted-foreground hover:text-loss"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() =>
+                    setDraft({ ...draft, custom: [...draft.custom, { label: "", value: "" }] })
+                  }
+                  className="flex items-center gap-1.5 rounded border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <Plus className="h-3 w-3" /> Add custom criterion
+                </button>
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2 pt-1">
               <button
                 onClick={() => setDraft(null)}
@@ -228,10 +335,11 @@ function AdminChallengesPage() {
                 Cancel
               </button>
               <button
-                onClick={save}
-                className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+                disabled={save.isPending}
+                onClick={() => save.mutate(draft)}
+                className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
               >
-                Save
+                {save.isPending ? "Saving…" : "Save"}
               </button>
             </div>
           </div>

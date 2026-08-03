@@ -36,7 +36,6 @@ import {
   billingQueryOptions,
   masterEarningsQueryOptions,
   masterProfileQueryOptions,
-  masterRateQueryOptions,
   mastersDirectoryQueryOptions,
   rosterQueryOptions,
   walletQueryOptions,
@@ -46,10 +45,8 @@ import {
   ApiError,
   closeAccount,
   pauseAccount,
-  PLATFORM_FEE_OF_MASTER_CUT_PCT,
   reactivateBilling,
   resumeAccount,
-  setMasterRate,
   switchMaster,
   upsertMasterProfile,
 } from "@/lib/api";
@@ -261,11 +258,10 @@ function MasterSections({ accountId }: { accountId: string }) {
     <>
       <MasterPerformancePanel accountId={accountId} />
       <MasterProfileEditor accountId={accountId} />
-      <MasterRateEditor accountId={accountId} />
       <MasterEarningsPanel accountId={accountId} />
       <MasterPayoutCard accountId={accountId} />
 
-      <ChallengeStatusPanel />
+      <ChallengeStatusPanel accountId={accountId} />
     </>
   );
 }
@@ -474,19 +470,19 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
 
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
-  const [isPublic, setIsPublic] = useState(false);
+  // Read-only: listing is granted by the platform, never set here.
+  const isPublic = profile?.is_public ?? false;
 
   // useState's initializer only runs once, at mount - it can't react to
   // `profile` arriving later from the query above, which is the normal
   // case (the query is still loading on first render). Without this
-  // effect, the fields would stay permanently blank/unchecked even after
+  // effect, the fields would stay permanently blank even after
   // real data loads, which was the actual bug: it wasn't that the data
   // wasn't fetched, it's that fetching it after mount had nowhere to go.
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name ?? "");
       setBio(profile.bio ?? "");
-      setIsPublic(profile.is_public);
     }
   }, [profile]);
 
@@ -495,7 +491,6 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
       upsertMasterProfile(accountId, {
         display_name: displayName.trim(),
         bio: bio.trim() || undefined,
-        is_public: isPublic,
       }),
     onSuccess: () => {
       toast.success("Profile saved.");
@@ -589,112 +584,6 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
   );
 }
 
-function MasterRateEditor({ accountId }: { accountId: string }) {
-  const qc = useQueryClient();
-  const { data: rate, isLoading } = useQuery(masterRateQueryOptions(accountId));
-  const [ratePct, setRatePct] = useState<string>("");
-
-  const currentRate = rate?.rate_percent ?? 0;
-
-  // The master only ever sets their own cut rate. The platform's cut is a
-  // flat number of percentage points of the follower's P&L (not a
-  // percentage OF the master's rate - see profit_share.py's
-  // process_follower_deals, which does `pnl * platform_cut_percent / 100`
-  // directly), deducted from whatever the master charges. This has to
-  // match that formula exactly, or this preview lies to the master about
-  // what they'll actually keep - which it previously did, by computing
-  // PLATFORM_FEE_OF_MASTER_CUT_PCT as a percentage OF rNum instead of
-  // using it directly.
-  const rNum = parseFloat(ratePct || String(currentRate));
-  const previewPlatformFee = isFinite(rNum) ? PLATFORM_FEE_OF_MASTER_CUT_PCT : null;
-  const previewNet =
-    isFinite(rNum) && previewPlatformFee !== null ? rNum - previewPlatformFee : null;
-
-  const save = useMutation({
-    mutationFn: () =>
-      setMasterRate(accountId, {
-        rate_percent: rNum,
-        platform_cut_percent: PLATFORM_FEE_OF_MASTER_CUT_PCT,
-      }),
-    onSuccess: (r) => {
-      toast.success(`Saved. You keep ${r.master_net_percent}% of what you charge.`);
-      setRatePct("");
-      qc.invalidateQueries({ queryKey: ["masters", accountId, "rate"] });
-      qc.invalidateQueries({ queryKey: ["masters", "directory"] });
-    },
-    onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message),
-  });
-
-  return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-        Your cut rate
-      </div>
-      <p className="mt-1 text-[11px] text-muted-foreground">
-        Set the percentage of each follower's profit you charge as your fee. The platform
-        automatically takes {PLATFORM_FEE_OF_MASTER_CUT_PCT} percentage points of that profit off
-        the top — you never set the platform's share, it's calculated for you.
-      </p>
-      {isLoading ? (
-        <PatientLoader label="Loading rate…" compact className="mt-2" />
-      ) : (
-        <>
-          <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
-            <Info 
-              label="Your cut rate" 
-              value={rate?.rate_percent != null ? `${rate.rate_percent}%` : "—"} 
-            />
-            <Info
-              label="Platform fee (flat points off your P&L cut)"
-              value={`${rate?.platform_cut_percent ?? PLATFORM_FEE_OF_MASTER_CUT_PCT}%`}
-            />
-            <Info
-              label="You keep"
-              value={
-                rate?.rate_percent != null
-                  ? `${rate.rate_percent - (rate.platform_cut_percent ?? PLATFORM_FEE_OF_MASTER_CUT_PCT)}%`
-                  : "—"
-              }
-              accent
-            />
-          </div>
-          <form
-            className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!isFinite(rNum) || rNum < 0) return;
-              save.mutate();
-            }}
-          >
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder={`Cut rate % (now ${currentRate})`}
-              value={ratePct}
-              onChange={(e) => setRatePct(e.target.value)}
-              className="rounded-md border border-border bg-input px-3 py-2 text-sm outline-none focus:border-primary"
-            />
-            <button
-              disabled={save.isPending}
-              className="rounded-md bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40"
-            >
-              {save.isPending ? "Saving…" : "Update"}
-            </button>
-          </form>
-          {ratePct !== "" && previewNet !== null && previewPlatformFee !== null && (
-            <div className="mt-2 text-[11px] text-muted-foreground">
-              At {rNum}% you'd take home{" "}
-              <span className="font-mono text-profit">{previewNet.toFixed(2)}%</span> of follower
-              profit, after a <span className="font-mono">{previewPlatformFee.toFixed(2)}%</span>{" "}
-              platform fee.
-            </div>
-          )}
-        </>
-      )}
-    </section>
-  );
-}
 
 function MasterEarningsPanel({ accountId }: { accountId: string }) {
   const { data, isLoading, error } = useQuery(masterEarningsQueryOptions(accountId));

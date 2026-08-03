@@ -289,36 +289,6 @@ function AdminDashboard() {
 
       <UserManagement />
 
-      <Panel title="Platform read-out">
-        <ul className="space-y-2 text-xs leading-relaxed text-muted-foreground">
-          <Insight>
-            Profit share is the fastest-growing stream — it now contributes{" "}
-            <strong className="text-foreground">
-              {Math.round(
-                (s.revenue[s.revenue.length - 1].profitShare / totals.mrr) * 100,
-              )}
-              %
-            </strong>{" "}
-            of monthly revenue, so master quality drives the P&amp;L more than seat count does.
-          </Insight>
-          <Insight>
-            <strong className="text-foreground">{totals.atRisk}</strong> follower wallets are in
-            debt or grace. Every one of them stops generating slot fees until it's topped up —
-            chase these before acquiring new followers.
-          </Insight>
-          <Insight>
-            Execution clusters in the London/New York overlap. Off-session infra can be scaled down
-            without touching fill quality.
-          </Insight>
-          <Insight>
-            Followers per master averages{" "}
-            <strong className="text-foreground">
-              {(totals.followers / Math.max(totals.masters, 1)).toFixed(1)}
-            </strong>
-            . Graduating more challengers is the cheapest way to lift capacity.
-          </Insight>
-        </ul>
-      </Panel>
     </div>
   );
 }
@@ -380,15 +350,6 @@ function Panel({
   );
 }
 
-function Insight({ children }: { children: React.ReactNode }) {
-  return (
-    <li className="flex gap-2">
-      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary" />
-      <span>{children}</span>
-    </li>
-  );
-}
-
 function Heatmap({ grid }: { grid: number[][] }) {
   const max = Math.max(...grid.flat(), 1);
   return (
@@ -443,28 +404,14 @@ function PayoutQueue() {
             <div className="flex shrink-0 items-center gap-2">
               <span className="font-mono text-sm text-profit">{currency(p.amount)}</span>
               {p.status === "pending" ? (
-                <>
-                  <button
-                    onClick={() => adminMock.resolvePayout(p.id, "approved")}
-                    className="rounded border border-profit/40 px-2.5 py-1.5 text-[11px] text-profit"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => adminMock.resolvePayout(p.id, "rejected")}
-                    className="rounded border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground hover:text-loss"
-                  >
-                    Reject
-                  </button>
-                </>
-              ) : (
-                <span
-                  className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase ${
-                    p.status === "approved"
-                      ? "border-profit/40 bg-profit/10 text-profit"
-                      : "border-loss/40 bg-loss/10 text-loss"
-                  }`}
+                <button
+                  onClick={() => adminMock.resolvePayout(p.id, "paid")}
+                  className="rounded border border-profit/40 px-2.5 py-1.5 text-[11px] text-profit"
                 >
+                  Mark paid
+                </button>
+              ) : (
+                <span className="rounded border border-profit/40 bg-profit/10 px-2 py-0.5 font-mono text-[10px] uppercase text-profit">
                   {p.status}
                 </span>
               )}

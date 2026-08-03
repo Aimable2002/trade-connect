@@ -44,7 +44,8 @@ export interface PayoutRequest {
   masterName: string;
   amount: number;
   requestedAt: string;
-  status: "pending" | "approved" | "rejected";
+  // Mirrors the real `master_payouts` table, which only has these two states.
+  status: "pending" | "paid";
 }
 
 export interface TopMasterRow {
@@ -212,7 +213,7 @@ export const adminMock = {
   get() {
     return state;
   },
-  resolvePayout(id: string, status: "approved" | "rejected") {
+  resolvePayout(id: string, status: PayoutRequest["status"]) {
     setState({
       ...state,
       payouts: state.payouts.map((p) => (p.id === id ? { ...p, status } : p)),
