@@ -443,28 +443,14 @@ function PayoutQueue() {
             <div className="flex shrink-0 items-center gap-2">
               <span className="font-mono text-sm text-profit">{currency(p.amount)}</span>
               {p.status === "pending" ? (
-                <>
-                  <button
-                    onClick={() => adminMock.resolvePayout(p.id, "approved")}
-                    className="rounded border border-profit/40 px-2.5 py-1.5 text-[11px] text-profit"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => adminMock.resolvePayout(p.id, "rejected")}
-                    className="rounded border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground hover:text-loss"
-                  >
-                    Reject
-                  </button>
-                </>
-              ) : (
-                <span
-                  className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase ${
-                    p.status === "approved"
-                      ? "border-profit/40 bg-profit/10 text-profit"
-                      : "border-loss/40 bg-loss/10 text-loss"
-                  }`}
+                <button
+                  onClick={() => adminMock.resolvePayout(p.id, "paid")}
+                  className="rounded border border-profit/40 px-2.5 py-1.5 text-[11px] text-profit"
                 >
+                  Mark paid
+                </button>
+              ) : (
+                <span className="rounded border border-profit/40 bg-profit/10 px-2 py-0.5 font-mono text-[10px] uppercase text-profit">
                   {p.status}
                 </span>
               )}
