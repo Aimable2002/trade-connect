@@ -101,3 +101,73 @@ export function formatLatency(ms: number | null): string {
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
   return `${Math.round(ms / 60_000)}m`;
 }
+
+export interface PublicMaster {
+  accountId: string;
+  displayName: string;
+  /** Open, unrealised P&L on the master's own account — the only figure a
+   *  signed-out visitor can legitimately see without a bearer token. */
+  openPnl: number | null;
+  followers: number;
+}
+
+/**
+ * Unauthenticated social-proof list for the landing page. Anything RLS hides
+ * simply yields an empty list, so the section renders nothing rather than an
+ * error — same degrade-gracefully contract as `publicStatsQueryOptions`.
+ */
+export const publicMastersQueryOptions = () =>
+  queryOptions({
+    queryKey: ["public-masters"],
+    staleTime: 60_000,
+    retry: false,
+    queryFn: async (): Promise<PublicMaster[]> => {
+      const profilesRes = await supabase
+        .from("master_profiles")
+        .select("account_id,display_name,is_public")
+        .eq("is_public", true)
+        .limit(24);
+
+      const profiles = (profilesRes.data ?? []) as {
+        account_id: string;
+        display_name: string | null;
+      }[];
+      if (profiles.length === 0) return [];
+
+      const ids = profiles.map((p) => p.account_id);
+      const [liveRes, subsRes] = await Promise.all([
+        supabase.from("live_account_state").select("account_id,balance,equity").in("account_id", ids),
+        supabase
+          .from("subscriptions")
+          .select("master_account_id,active")
+          .in("master_account_id", ids),
+      ]);
+
+      const live = (liveRes.data ?? []) as LiveAccountState[];
+      const subs = (subsRes.data ?? []) as { master_account_id: string; active: boolean }[];
+
+      const pnlOf = new Map(
+        live.map((r) => [
+          r.account_id,
+          typeof r.equity === "number" && typeof r.balance === "number"
+            ? r.equity - r.balance
+            : null,
+        ]),
+      );
+      const followerCount = new Map<string, number>();
+      for (const s of subs) {
+        if (s.active === false) continue;
+        followerCount.set(s.master_account_id, (followerCount.get(s.master_account_id) ?? 0) + 1);
+      }
+
+      return profiles
+        .map((p) => ({
+          accountId: p.account_id,
+          displayName: p.display_name?.trim() || `Master ${p.account_id.slice(-4)}`,
+          openPnl: pnlOf.get(p.account_id) ?? null,
+          followers: followerCount.get(p.account_id) ?? 0,
+        }))
+        .sort((a, b) => (b.openPnl ?? -Infinity) - (a.openPnl ?? -Infinity))
+        .slice(0, 4);
+    },
+  });
