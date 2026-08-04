@@ -59,6 +59,7 @@ interface Draft {
   rewardAmount: string;
   predefined: Record<string, string>;
   custom: CustomRow[];
+  isFixed: boolean;
 }
 
 const emptyDraft = (): Draft => ({
@@ -68,6 +69,7 @@ const emptyDraft = (): Draft => ({
   rewardAmount: "",
   predefined: {},
   custom: [],
+  isFixed: false,
 });
 
 function toDraft(c: Challenge): Draft {
@@ -85,6 +87,7 @@ function toDraft(c: Challenge): Draft {
     rewardAmount: String(c.reward_amount ?? ""),
     predefined,
     custom,
+    isFixed: c.is_fixed,
   };
 }
 
@@ -127,7 +130,29 @@ function AdminChallengesPageContent() {
         description: d.description.trim() || null,
         criteria,
         reward_amount: Number(d.rewardAmount) || 0,
+        is_fixed: d.isFixed,
+        // Challenge 1 is the public entry point every master lands on before
+        // anything else unlocks, so it can't be saved inactive - that would
+        // silently lock everyone out of graduating with no way to tell why.
+        active: d.isFixed ? true : undefined,
       };
+
+      // Only one challenge can be "Challenge 1" at a time - has_passed_challenge_one()
+      // on the backend resolves it via a single .limit(1) lookup, so two fixed rows
+      // would make graduation depend on unspecified row order. Making this one fixed
+      // demotes whichever challenge currently holds that slot (a no-op if there isn't
+      // one, or if it's this same challenge).
+      if (d.isFixed) {
+        const currentFixed = (data ?? []).find((c) => c.is_fixed && c.id !== d.id);
+        if (currentFixed) {
+          const { error: demoteErr } = await supabase
+            .from("challenges")
+            .update({ is_fixed: false })
+            .eq("id", currentFixed.id);
+          if (demoteErr) throw demoteErr;
+        }
+      }
+
       if (d.id) {
         const { error: e } = await supabase
           .from("challenges")
@@ -137,12 +162,12 @@ function AdminChallengesPageContent() {
       } else {
         const { error: e } = await supabase
           .from("challenges")
-          .insert({ ...payload, is_fixed: false, active: true });
+          .insert({ ...payload, active: true });
         if (e) throw e;
       }
     },
-    onSuccess: () => {
-      toast.success("Challenge saved.");
+    onSuccess: (_data, d) => {
+      toast.success(d.isFixed ? "Saved as Challenge 1 (mandatory, public)." : "Challenge saved.");
       setDraft(null);
       invalidate();
     },
@@ -151,6 +176,12 @@ function AdminChallengesPageContent() {
 
   const toggleActive = useMutation({
     mutationFn: async (c: Challenge) => {
+      if (c.is_fixed && c.active) {
+        throw new Error(
+          "Challenge 1 can't be deactivated while it's the mandatory entry point - " +
+            "unset \"Challenge 1\" on it first (or make another challenge Challenge 1).",
+        );
+      }
       const { error: e } = await supabase
         .from("challenges")
         .update({ active: !c.active })
@@ -291,6 +322,23 @@ function AdminChallengesPageContent() {
                 </Field>
               ))}
             </div>
+
+            <label className="flex items-start gap-2 rounded-md border border-border bg-background/60 p-2.5">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={draft.isFixed}
+                onChange={(e) => setDraft({ ...draft, isFixed: e.target.checked })}
+              />
+              <span className="text-xs">
+                <span className="font-semibold">Make this Challenge 1</span>
+                <span className="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
+                  Mandatory and open to every master immediately. Every other challenge
+                  stays locked until a master passes this one. Only one challenge can hold
+                  this slot — checking it here unfixes whichever challenge currently has it.
+                </span>
+              </span>
+            </label>
 
             <div>
               <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
