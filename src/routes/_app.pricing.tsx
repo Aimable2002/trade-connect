@@ -842,7 +842,7 @@ function BreakevenCalculator({
             <ShieldAlert className="h-3 w-3" /> If you wait
           </div>
           <div className="mt-1.5 font-mono text-2xl font-semibold text-muted-foreground">
-            ${(tier.perDay * 0).toFixed(2)}
+            {result.topup !== null ? `-$${result.topup.toFixed(2)}` : "—"}
           </div>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
             No credit, no roster slot, and no track record building on{" "}
