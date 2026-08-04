@@ -28,6 +28,7 @@ import {
   type AdminUser,
 } from "@/lib/admin-mock";
 import { PlaceholderBanner } from "@/components/PlaceholderBanner";
+import { AdminGate } from "@/components/AdminGate";
 
 export const Route = createFileRoute("/_app/admin/")({
   head: () => ({
@@ -51,6 +52,14 @@ export const Route = createFileRoute("/_app/admin/")({
 });
 
 function AdminDashboard() {
+  return (
+    <AdminGate>
+      <AdminDashboardContent />
+    </AdminGate>
+  );
+}
+
+function AdminDashboardContent() {
   const s = useAdminMock();
 
   const totals = useMemo(() => {
