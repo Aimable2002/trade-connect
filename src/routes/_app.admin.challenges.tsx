@@ -9,6 +9,7 @@ import { challengesQueryOptions } from "@/lib/queries";
 import { CriteriaSummary } from "@/components/challenges/ChallengeBits";
 import { ErrorState, PatientLoader } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
+import { AdminGate } from "@/components/AdminGate";
 
 export const Route = createFileRoute("/_app/admin/challenges")({
   head: () => ({
@@ -31,11 +32,19 @@ export const Route = createFileRoute("/_app/admin/challenges")({
   component: AdminChallengesPage,
 });
 
+/**
+ * These are the only criteria the UI treats as first-class/predefined -
+ * shown with their own labeled input. Referrals are deliberately NOT in
+ * this list: referral tracking isn't a guaranteed, always-present field on
+ * every challenge, so it shouldn't be forced into the same required-looking
+ * data package as the metrics that are. An admin who wants a referral
+ * threshold can still add it as a custom key ("referrals") below - it's
+ * fully supported, just optional rather than baked in.
+ */
 const PREDEFINED = [
   { key: "winRatePct", label: "Min win rate (%)" },
   { key: "profitFactor", label: "Min profit factor" },
   { key: "maxDrawdownPct", label: "Max drawdown (%)" },
-  { key: "referrals", label: "Min referrals" },
 ] as const;
 
 interface CustomRow {
@@ -87,6 +96,14 @@ function coerce(value: string): string | number {
 }
 
 function AdminChallengesPage() {
+  return (
+    <AdminGate>
+      <AdminChallengesPageContent />
+    </AdminGate>
+  );
+}
+
+function AdminChallengesPageContent() {
   const qc = useQueryClient();
   const { data, isLoading, error, refetch } = useQuery(challengesQueryOptions());
   const [draft, setDraft] = useState<Draft | null>(null);
