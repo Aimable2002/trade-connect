@@ -1,29 +1,40 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   accountsQueryOptions,
   billingQueryOptions,
   packagesQueryOptions,
   walletQueryOptions,
   walletTxQueryOptions,
-  type Package,
 } from "@/lib/queries";
 import { ApiError, reactivateBilling, selectPackage, topupWallet } from "@/lib/api";
+import {
+  breakeven,
+  buildTierInsights,
+  bundledTopup,
+  cycleCost,
+  PLATFORM_CUT_PCT,
+  tierName,
+  tierPitch,
+  type TierInsight,
+} from "@/lib/pricing";
 import { NumericValue } from "@/components/NumericValue";
 import { toast } from "sonner";
 import {
   ArrowDownLeft,
   ArrowLeft,
   ArrowUpRight,
+  Calculator,
   Check,
   ChevronDown,
   Clock,
+  Gift,
   Info as InfoIcon,
-  Package as PackageIcon,
   Plus,
   RefreshCw,
   ShieldAlert,
+  Sparkles,
   Wallet,
 } from "lucide-react";
 import { PatientLoader, ErrorState } from "@/components/DataState";
@@ -36,12 +47,12 @@ export const Route = createFileRoute("/_app/pricing")({
       {
         name: "description",
         content:
-          "Top up your CopyDesk wallet and activate a copy-trading package for your follower account.",
+          "Top up your CopyDesk wallet and pick a copy-trading commitment — the longer the cycle, the lower the cost per day.",
       },
       { property: "og:title", content: "Wallet & Packages — CopyDesk" },
       {
         property: "og:description",
-        content: "Top up your wallet and activate a copy-trading package.",
+        content: "Top up your wallet and pick a copy-trading commitment tier.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -124,9 +135,13 @@ function Header() {
       <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
         Wallet &amp; billing
       </div>
-      <h1 className="mt-1 text-2xl font-semibold md:text-3xl">Pricing</h1>
-      <p className="mt-1 text-xs text-muted-foreground md:text-sm">
-        Top up your wallet, then activate a package to keep copy trading running.
+      <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-4xl">
+        Commit longer, pay less per day.
+      </h1>
+      <p className="mt-2 max-w-xl text-xs leading-relaxed text-muted-foreground md:text-sm">
+        One wallet per follower account funds everything: your cycle fee, per-slot fees and the
+        platform's share of copied profit. Every figure below is read live from your billing
+        packages.
       </p>
     </header>
   );
@@ -166,20 +181,17 @@ function PricingForAccount({
       toast.success(
         billingStatus === "closed"
           ? "Billing reactivated. You may need to re-provision the account."
-          : "Package activated.",
+          : "Package activated — the bundled credit lands in your wallet.",
       );
       qc.invalidateQueries({ queryKey: ["accounts", accountId] });
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message),
   });
 
-  const sorted = [...(packages ?? [])].sort(
-    (a, b) => a.infra_fee + a.slot_fee_per_slot - (b.infra_fee + b.slot_fee_per_slot),
-  );
-  const recommendedCode = sorted.length >= 3 ? sorted[1].code : sorted[0]?.code;
+  const tiers = useMemo(() => buildTierInsights(packages ?? []), [packages]);
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5 p-4 md:p-8">
+    <div className="mx-auto w-full max-w-4xl space-y-6 p-4 pb-24 md:p-8">
       <div className="flex items-center justify-between gap-3">
         <Link
           to="/dashboard"
@@ -203,38 +215,45 @@ function PricingForAccount({
 
       <BillingStatusCard
         billing={billing}
+        tiers={tiers}
         onReactivate={(code) => pick.mutate(code)}
         reactivating={pick.isPending}
       />
 
       <section className="space-y-3">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-          <PackageIcon className="h-3 w-3" /> Packages
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold">Choose a commitment</h2>
+          <span className="text-[11px] text-muted-foreground">
+            Prices shown per cycle and normalised per day
+          </span>
         </div>
+
         {pkgLoading && <PatientLoader label="Loading packages…" />}
         {pkgError && (
           <ErrorState message={`Couldn't load packages: ${(pkgError as Error).message}`} />
         )}
-        {!pkgLoading && !pkgError && sorted.length === 0 && (
+        {!pkgLoading && !pkgError && tiers.length === 0 && (
           <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
             No packages are available right now.
           </div>
         )}
-        <div className="grid gap-3 md:grid-cols-3">
-          {sorted.map((p) => (
-            <PackageCard
-              key={p.code}
-              pkg={p}
-              current={currentPkg === p.code && billingStatus !== "closed"}
-              closed={currentPkg === p.code && billingStatus === "closed"}
-              recommended={p.code === recommendedCode}
-              onSelect={() => pick.mutate(p.code)}
+
+        <div className="grid gap-2.5">
+          {tiers.map((t) => (
+            <PackageRow
+              key={t.pkg.code}
+              tier={t}
+              current={currentPkg === t.pkg.code && billingStatus !== "closed"}
+              closed={currentPkg === t.pkg.code && billingStatus === "closed"}
+              onSelect={() => pick.mutate(t.pkg.code)}
               pending={pick.isPending}
-              insufficientFunds={!!wallet && wallet.balance < p.infra_fee + p.slot_fee_per_slot}
+              insufficientFunds={!!wallet && wallet.balance < cycleCost(t.pkg)}
             />
           ))}
         </div>
       </section>
+
+      {tiers.length > 0 && <BreakevenCalculator tiers={tiers} defaultCode={currentPkg} />}
 
       <WalletTransactions accountId={accountId} />
     </div>
@@ -461,6 +480,7 @@ function WalletTransactions({ accountId }: { accountId: string }) {
 
 function BillingStatusCard({
   billing,
+  tiers,
   onReactivate,
   reactivating,
 }: {
@@ -473,61 +493,89 @@ function BillingStatusCard({
         grace_started_at?: string | null;
       }
     | undefined;
+  tiers: TierInsight[];
   onReactivate: (code: string) => void;
   reactivating: boolean;
 }) {
   const isGrace = !!billing && billing.status === "grace";
   const isClosed = !!billing && billing.status === "closed";
+  const active = billing && billing.status !== "none" && "package_code" in billing ? billing : null;
+  const tier = active ? tiers.find((t) => t.pkg.code === active.package_code) : undefined;
 
   return (
     <section
       className={cn(
-        "rounded-xl border bg-card p-4 md:p-5",
-        isGrace ? "border-warning/40" : isClosed ? "border-loss/40" : "border-border",
+        "overflow-hidden rounded-xl border",
+        isGrace
+          ? "border-warning/40 bg-warning/[0.04]"
+          : isClosed
+            ? "border-loss/40 bg-loss/[0.04]"
+            : "border-border bg-card",
       )}
     >
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-        Subscription
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 md:p-5">
+        <div className="min-w-0">
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+            Current subscription
+          </div>
+          {!active ? (
+            <div className="mt-1.5 text-sm font-semibold">No package yet</div>
+          ) : (
+            <div className="mt-1.5 flex flex-wrap items-baseline gap-2">
+              <span className="text-xl font-semibold tracking-tight">
+                {tierName(active.package_code)}
+              </span>
+              <span className="font-mono text-[11px] uppercase text-muted-foreground">
+                {active.package_code}
+              </span>
+              <StatusPillBilling status={active.status} />
+            </div>
+          )}
+          {!active && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Pick a commitment below to start copying.
+            </p>
+          )}
+          {active?.renews_at && (
+            <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" /> Renews{" "}
+              {new Date(active.renews_at).toLocaleDateString()}
+            </div>
+          )}
+        </div>
+
+        {tier && (
+          <div className="text-right">
+            <div className="font-mono text-lg font-semibold">
+              <NumericValue value={cycleCost(tier.pkg)} format="currency" flash={false} />
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              per {tier.pkg.duration_days}-day cycle
+            </div>
+          </div>
+        )}
       </div>
 
-      {(!billing || billing.status === "none") && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          No active package yet. Pick one below to start copying.
-        </p>
+      {isGrace && (
+        <div className="border-t border-warning/30 px-4 py-3 text-[11px] leading-relaxed text-warning md:px-5">
+          Grace period — top up your wallet so the next renewal goes through automatically. Copying
+          keeps running until the grace window closes.
+        </div>
       )}
 
-      {billing && billing.status !== "none" && "package_code" in billing && (
-        <div className="mt-2 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-lg font-semibold uppercase">
-              {billing.package_code}
-            </span>
-            <StatusPillBilling status={billing.status} />
-          </div>
-
-          {billing.renews_at && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" /> Renews{" "}
-              {new Date(billing.renews_at).toLocaleDateString()}
-            </div>
-          )}
-
-          {isGrace && (
-            <div className="rounded-md border border-warning/40 bg-warning/10 p-2.5 text-[11px] text-warning">
-              In grace period — top up your wallet so the next renewal can go through automatically.
-            </div>
-          )}
-
-          {isClosed && (
-            <button
-              onClick={() => onReactivate(billing.package_code)}
-              disabled={reactivating}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3.5 py-3 text-xs font-semibold text-primary-foreground disabled:opacity-40 sm:w-auto"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              {reactivating ? "Reactivating…" : "Reactivate this package"}
-            </button>
-          )}
+      {isClosed && active && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-loss/30 px-4 py-3 md:px-5">
+          <span className="text-[11px] leading-relaxed text-loss">
+            Billing closed — copying is stopped until you reactivate.
+          </span>
+          <button
+            onClick={() => onReactivate(active.package_code)}
+            disabled={reactivating}
+            className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            {reactivating ? "Reactivating…" : "Reactivate"}
+          </button>
         </div>
       )}
     </section>
@@ -552,103 +600,138 @@ function StatusPillBilling({ status }: { status: string }) {
   );
 }
 
-/* ---------------- package cards ---------------- */
+/* ---------------- package rows ---------------- */
 
-function PackageCard({
-  pkg,
+function PackageRow({
+  tier,
   current,
   closed,
-  recommended,
   onSelect,
   pending,
   insufficientFunds,
 }: {
-  pkg: Package;
+  tier: TierInsight;
   current: boolean;
   closed: boolean;
-  recommended: boolean;
   onSelect: () => void;
   pending: boolean;
   insufficientFunds: boolean;
 }) {
-  const total = pkg.infra_fee + pkg.slot_fee_per_slot;
+  const { pkg } = tier;
+  const total = cycleCost(pkg);
+  const pitch = tierPitch(pkg.code);
+  const topup = bundledTopup(pkg.code);
 
   return (
     <div
       className={cn(
-        "relative flex flex-col rounded-xl border p-4 transition-colors md:p-5",
+        "rounded-xl border p-4 transition-colors md:p-5",
         current
           ? "border-primary bg-primary/5"
-          : recommended
+          : tier.recommended
             ? "border-primary/50 bg-card"
             : "border-border bg-card",
       )}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] md:items-center">
+        {/* identity */}
         <div className="min-w-0">
-          <div className="truncate font-mono text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {pkg.code}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-base font-semibold tracking-tight">{tierName(pkg.code)}</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              {pkg.code} · {pkg.duration_days}d
+            </span>
+            {current && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary-foreground">
+                <Check className="h-2.5 w-2.5" /> Current
+              </span>
+            )}
+            {!current && tier.recommended && (
+              <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary">
+                Popular
+              </span>
+            )}
           </div>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
-            <span className="text-3xl font-semibold">
-              <NumericValue value={total} format="currency" flash={false} />
+          {pitch && <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{pitch}</p>}
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+            <span>
+              Roster <span className="font-mono text-foreground">{pkg.base_roster_size}</span>
             </span>
-            <span className="text-[11px] text-muted-foreground">
-              / {pkg.duration_days}-day cycle
-            </span>
+            {tier.unlocksRoster && tier.rosterDelta > 0 && (
+              <span className="text-primary">
+                Unlocks {tier.rosterDelta} extra slot{tier.rosterDelta > 1 ? "s" : ""}
+              </span>
+            )}
+            {tier.savingsPct >= 1 && (
+              <span className="text-profit">Save {tier.savingsPct.toFixed(0)}% per day</span>
+            )}
           </div>
         </div>
-        {current ? (
-          <span className="flex shrink-0 items-center gap-1 rounded-full border border-primary/40 bg-primary px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary-foreground">
-            <Check className="h-2.5 w-2.5" /> Current
-          </span>
-        ) : recommended ? (
-          <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary">
-            Popular
-          </span>
-        ) : null}
+
+        {/* price breakdown */}
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border text-center">
+          <Spec
+            label="Infra"
+            value={<NumericValue value={pkg.infra_fee} format="currency" flash={false} />}
+          />
+          <Spec
+            label="Per slot"
+            value={<NumericValue value={pkg.slot_fee_per_slot} format="currency" flash={false} />}
+          />
+          <Spec label="Per day" value={`$${tier.perDay.toFixed(2)}`} />
+        </div>
+
+        {/* price + cta */}
+        <div className="flex items-center justify-between gap-3 md:flex-col md:items-end">
+          <div className="text-right">
+            <div className="text-2xl font-semibold tracking-tight">
+              <NumericValue value={total} format="currency" flash={false} />
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              ≈ ${tier.perMonth.toFixed(2)}/mo
+            </div>
+          </div>
+          <button
+            onClick={onSelect}
+            disabled={pending || (current && !closed)}
+            className={cn(
+              "shrink-0 rounded-lg px-5 py-3 text-xs font-semibold disabled:opacity-40 md:w-40",
+              current && !closed
+                ? "border border-primary/40 bg-primary/10 text-primary"
+                : "bg-primary text-primary-foreground",
+            )}
+          >
+            {current && !closed
+              ? "Active"
+              : closed
+                ? pending
+                  ? "Reactivating…"
+                  : "Reactivate"
+                : pending
+                  ? "Activating…"
+                  : "Select"}
+          </button>
+        </div>
       </div>
 
-      <dl className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border text-center">
-        <Spec label="Roster" value={String(pkg.base_roster_size)} />
-        <Spec
-          label="Infra"
-          value={<NumericValue value={pkg.infra_fee} format="currency" flash={false} />}
-        />
-        <Spec
-          label="Per slot"
-          value={<NumericValue value={pkg.slot_fee_per_slot} format="currency" flash={false} />}
-        />
-      </dl>
-
-      <div className="flex-1" />
-
-      {insufficientFunds && !current && (
-        <div className="mt-3 flex items-center gap-1.5 text-[10px] text-warning">
-          <ShieldAlert className="h-3 w-3 shrink-0" /> Balance is below the cycle cost
-        </div>
-      )}
-
-      <button
-        onClick={onSelect}
-        disabled={pending || (current && !closed)}
-        className={cn(
-          "mt-3 w-full rounded-lg py-3 text-xs font-semibold disabled:opacity-40",
-          current && !closed
-            ? "border border-primary/40 bg-primary/10 text-primary"
-            : "bg-primary text-primary-foreground",
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border pt-3 text-[11px]">
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+          <Gift className="h-3.5 w-3.5 text-primary" />
+          {topup !== null ? (
+            <>
+              Includes a <span className="font-mono text-foreground">${topup.toFixed(2)}</span>{" "}
+              wallet credit on selection
+            </>
+          ) : (
+            <>Selecting or switching bundles a wallet credit — amount announced at launch</>
+          )}
+        </span>
+        {insufficientFunds && !current && (
+          <span className="inline-flex items-center gap-1.5 text-warning">
+            <ShieldAlert className="h-3 w-3 shrink-0" /> Balance is below the cycle cost
+          </span>
         )}
-      >
-        {current && !closed
-          ? "Active"
-          : closed
-            ? pending
-              ? "Reactivating…"
-              : "Reactivate"
-            : pending
-              ? "Activating…"
-              : "Select package"}
-      </button>
+      </div>
     </div>
   );
 }
@@ -659,5 +742,125 @@ function Spec({ label, value }: { label: string; value: React.ReactNode }) {
       <dt className="text-[9px] uppercase tracking-widest text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 font-mono text-xs">{value}</dd>
     </div>
+  );
+}
+
+/* ---------------- breakeven calculator ---------------- */
+
+function BreakevenCalculator({
+  tiers,
+  defaultCode,
+}: {
+  tiers: TierInsight[];
+  defaultCode: string | null;
+}) {
+  const [capitalInput, setCapitalInput] = useState("");
+  const [code, setCode] = useState(
+    defaultCode && tiers.some((t) => t.pkg.code === defaultCode)
+      ? defaultCode
+      : (tiers.find((t) => t.recommended) ?? tiers[0]).pkg.code,
+  );
+
+  const tier = tiers.find((t) => t.pkg.code === code) ?? tiers[0];
+  const capital = parseFloat(capitalInput);
+  const capitalValue = isFinite(capital) && capital > 0 ? capital : 0;
+  const result = breakeven(bundledTopup(tier.pkg.code), capitalValue);
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-4 md:p-5">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+        <Calculator className="h-3.5 w-3.5" /> What starting now is worth
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-[11px] text-muted-foreground">Your MT5 capital</span>
+          <input
+            value={capitalInput}
+            onChange={(e) => setCapitalInput(e.target.value)}
+            type="number"
+            min="0"
+            step="100"
+            placeholder="e.g. 5000"
+            className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-3 font-mono text-sm outline-none focus:border-primary"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[11px] text-muted-foreground">Package</span>
+          <div className="relative mt-1">
+            <select
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="w-full appearance-none rounded-lg border border-border bg-input px-3 py-3 pr-8 text-sm outline-none focus:border-primary"
+            >
+              {tiers.map((t) => (
+                <option key={t.pkg.code} value={t.pkg.code}>
+                  {tierName(t.pkg.code)} · {t.pkg.duration_days}d
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          </div>
+        </label>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="rounded-lg border border-primary/40 bg-primary/5 p-3.5">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-primary">
+            <Sparkles className="h-3 w-3" /> If you start today
+          </div>
+          <div className="mt-1.5 font-mono text-2xl font-semibold">
+            {result.topup !== null ? `$${result.topup.toFixed(2)}` : "TBC"}
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            {result.topup !== null ? (
+              <>
+                lands in your wallet with {tierName(tier.pkg.code)}. The platform's{" "}
+                {PLATFORM_CUT_PCT}% cut only starts eating into it after{" "}
+                <span className="font-mono text-foreground">
+                  ${result.profitToBreakeven?.toFixed(2)}
+                </span>{" "}
+                of copied profit
+                {result.returnPctToBreakeven !== null && (
+                  <> — a {result.returnPctToBreakeven.toFixed(1)}% return on your capital</>
+                )}
+                .
+              </>
+            ) : (
+              <>
+                The bundled credit for {tierName(tier.pkg.code)} isn't published yet. Once it is,
+                this shows exactly how much copied profit the {PLATFORM_CUT_PCT}% platform cut has
+                to consume before the credit is used up.
+              </>
+            )}
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-border bg-background/40 p-3.5">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+            <ShieldAlert className="h-3 w-3" /> If you wait
+          </div>
+          <div className="mt-1.5 font-mono text-2xl font-semibold text-muted-foreground">
+            {result.topup !== null ? `-$${result.topup.toFixed(2)}` : "—"}
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            No credit, no roster slot, and no track record building on{" "}
+            {capitalValue > 0 ? (
+              <span className="font-mono text-foreground">${capitalValue.toFixed(0)}</span>
+            ) : (
+              "your capital"
+            )}{" "}
+            while you decide. Every idle day is{" "}
+            <span className="font-mono text-foreground">${tier.perDay.toFixed(2)}</span> of
+            already-cheap infrastructure you aren't using.
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
+        Illustrative only. Copied results vary by master, sizing mode and broker execution — nothing
+        here is a projection of your returns.
+      </p>
+    </section>
   );
 }
