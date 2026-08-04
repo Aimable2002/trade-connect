@@ -17,6 +17,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -61,8 +62,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/auth", replace: true });
   };
 
-  const primary = NAV.filter((n) => (MOBILE_PRIMARY as readonly string[]).includes(n.to));
-  const secondary = NAV.filter((n) => !(MOBILE_PRIMARY as readonly string[]).includes(n.to));
+  const { isAdmin } = useIsAdmin();
+  const nav = isAdmin ? NAV : NAV.filter((n) => n.to !== "/admin");
+  const primary = nav.filter((n) => (MOBILE_PRIMARY as readonly string[]).includes(n.to));
+  const secondary = nav.filter((n) => !(MOBILE_PRIMARY as readonly string[]).includes(n.to));
   const menuActive = secondary.some((n) => pathname.startsWith(n.to));
 
   return (
@@ -74,7 +77,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="font-mono text-sm font-bold tracking-widest">COPYDESK</span>
         </div>
         <nav className="flex-1 space-y-0.5 p-2">
-          {NAV.map((n) => {
+          {nav.map((n) => {
             const active = pathname.startsWith(n.to);
             const Icon = n.icon;
             return (
