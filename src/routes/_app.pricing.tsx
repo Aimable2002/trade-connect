@@ -20,6 +20,7 @@ import {
   type TierInsight,
 } from "@/lib/pricing";
 import { NumericValue } from "@/components/NumericValue";
+import { Modal } from "@/components/Modal";
 import { toast } from "sonner";
 import {
   ArrowDownLeft,
@@ -184,11 +185,13 @@ function PricingForAccount({
           : "Package activated — the bundled credit lands in your wallet.",
       );
       qc.invalidateQueries({ queryKey: ["accounts", accountId] });
+      setConfirmTier(null);
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message),
   });
 
   const tiers = useMemo(() => buildTierInsights(packages ?? []), [packages]);
+  const [confirmTier, setConfirmTier] = useState<TierInsight | null>(null);
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 p-4 pb-24 md:p-8">
@@ -245,7 +248,7 @@ function PricingForAccount({
               tier={t}
               current={currentPkg === t.pkg.code && billingStatus !== "closed"}
               closed={currentPkg === t.pkg.code && billingStatus === "closed"}
-              onSelect={() => pick.mutate(t.pkg.code)}
+              onSelect={() => setConfirmTier(t)}
               pending={pick.isPending}
               insufficientFunds={!!wallet && wallet.balance < cycleCost(t.pkg)}
             />
@@ -253,10 +256,93 @@ function PricingForAccount({
         </div>
       </section>
 
-      {tiers.length > 0 && <BreakevenCalculator tiers={tiers} defaultCode={currentPkg} />}
+      <BreakevenCalculator walletBalance={wallet?.balance} />
 
       <WalletTransactions accountId={accountId} />
+
+      <ConfirmPackageModal
+        tier={confirmTier}
+        onClose={() => setConfirmTier(null)}
+        onConfirm={(code) => pick.mutate(code)}
+        pending={pick.isPending}
+        isReactivation={confirmTier ? confirmTier.pkg.code === currentPkg && billingStatus === "closed" : false}
+      />
     </div>
+  );
+}
+
+function ConfirmPackageModal({
+  tier,
+  onClose,
+  onConfirm,
+  pending,
+  isReactivation,
+}: {
+  tier: TierInsight | null;
+  onClose: () => void;
+  onConfirm: (code: string) => void;
+  pending: boolean;
+  isReactivation: boolean;
+}) {
+  if (!tier) return null;
+  const { pkg } = tier;
+  const price = cycleCost(pkg);
+  const topup = bundledTopup(pkg.code);
+
+  return (
+    <Modal open={!!tier} onClose={onClose} title={`Confirm ${tierName(pkg.code)}`}>
+      <div className="space-y-3">
+        <div className="rounded-lg border border-border bg-background/40 p-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] text-muted-foreground">Subscription price</span>
+            <span className="font-mono text-lg font-semibold">
+              <NumericValue value={price} format="currency" flash={false} />
+            </span>
+          </div>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            This is the recurring charge — you'll pay <span className="font-mono text-foreground">${price.toFixed(2)}</span> again
+            every {pkg.duration_days}-day cycle for as long as this package renews, deducted from
+            your wallet balance.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-border bg-background/40 p-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] text-muted-foreground">Wallet deposit add-on</span>
+            <span className="font-mono text-lg font-semibold">
+              {topup !== null ? `$${topup.toFixed(2)}` : "TBC"}
+            </span>
+          </div>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            {topup !== null ? (
+              <>
+                A separate, one-time credit added to your wallet on selection — not part of the
+                recurring subscription price above, and not something you'll be charged again.
+              </>
+            ) : (
+              <>This package's bundled wallet credit amount isn't published yet.</>
+            )}
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button
+            onClick={onClose}
+            disabled={pending}
+            className="rounded-md border border-border px-3.5 py-2.5 text-xs font-semibold disabled:opacity-40"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(pkg.code)}
+            disabled={pending}
+            className="rounded-md bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+          >
+            {pending ? (isReactivation ? "Reactivating…" : "Confirming…") : isReactivation ? "Reactivate" : "Confirm & activate"}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -746,35 +832,49 @@ function Spec({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 /* ---------------- breakeven calculator ---------------- */
+/* Standalone - answers one question, independent of any package: "if I add
+   $X to my wallet, that $X is what the platform's 20% cut has to consume -
+   so how much copied profit has to run through before that happens?"
+   Not gated behind package selection or a bundled-topup value. */
 
-function BreakevenCalculator({
-  tiers,
-  defaultCode,
-}: {
-  tiers: TierInsight[];
-  defaultCode: string | null;
-}) {
+function BreakevenCalculator({ walletBalance }: { walletBalance: number | undefined }) {
+  const [topupInput, setTopupInput] = useState("");
   const [capitalInput, setCapitalInput] = useState("");
-  const [code, setCode] = useState(
-    defaultCode && tiers.some((t) => t.pkg.code === defaultCode)
-      ? defaultCode
-      : (tiers.find((t) => t.recommended) ?? tiers[0]).pkg.code,
-  );
 
-  const tier = tiers.find((t) => t.pkg.code === code) ?? tiers[0];
+  const topup = parseFloat(topupInput);
+  const topupValue = isFinite(topup) && topup > 0 ? topup : null;
   const capital = parseFloat(capitalInput);
   const capitalValue = isFinite(capital) && capital > 0 ? capital : 0;
-  const result = breakeven(bundledTopup(tier.pkg.code), capitalValue);
+  const result = breakeven(topupValue, capitalValue);
 
   return (
     <section className="rounded-xl border border-border bg-card p-4 md:p-5">
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-        <Calculator className="h-3.5 w-3.5" /> What starting now is worth
+        <Calculator className="h-3.5 w-3.5" /> Wallet breakeven
       </div>
+      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+        Whatever you add to your wallet, the platform only takes {PLATFORM_CUT_PCT}% of copied
+        profit — never a cut of your capital. This shows how much profit needs to run through
+        before that {PLATFORM_CUT_PCT}% cut has consumed the amount you added.
+      </p>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="text-[11px] text-muted-foreground">Your MT5 capital</span>
+          <span className="text-[11px] text-muted-foreground">Wallet top-up amount</span>
+          <input
+            value={topupInput}
+            onChange={(e) => setTopupInput(e.target.value)}
+            type="number"
+            min="0"
+            step="10"
+            placeholder={
+              walletBalance !== undefined ? `e.g. ${walletBalance.toFixed(0)}` : "e.g. 100"
+            }
+            className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-3 font-mono text-sm outline-none focus:border-primary"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[11px] text-muted-foreground">Your MT5 capital (optional)</span>
           <input
             value={capitalInput}
             onChange={(e) => setCapitalInput(e.target.value)}
@@ -785,81 +885,40 @@ function BreakevenCalculator({
             className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-3 font-mono text-sm outline-none focus:border-primary"
           />
         </label>
-        <label className="block">
-          <span className="text-[11px] text-muted-foreground">Package</span>
-          <div className="relative mt-1">
-            <select
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full appearance-none rounded-lg border border-border bg-input px-3 py-3 pr-8 text-sm outline-none focus:border-primary"
-            >
-              {tiers.map((t) => (
-                <option key={t.pkg.code} value={t.pkg.code}>
-                  {tierName(t.pkg.code)} · {t.pkg.duration_days}d
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          </div>
-        </label>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        <div className="rounded-lg border border-primary/40 bg-primary/5 p-3.5">
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-primary">
-            <Sparkles className="h-3 w-3" /> If you start today
-          </div>
-          <div className="mt-1.5 font-mono text-2xl font-semibold">
-            {result.topup !== null ? `$${result.topup.toFixed(2)}` : "TBC"}
-          </div>
-          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-            {result.topup !== null ? (
-              <>
-                lands in your wallet with {tierName(tier.pkg.code)}. The platform's{" "}
-                {PLATFORM_CUT_PCT}% cut only starts eating into it after{" "}
-                <span className="font-mono text-foreground">
-                  ${result.profitToBreakeven?.toFixed(2)}
-                </span>{" "}
-                of copied profit
-                {result.returnPctToBreakeven !== null && (
-                  <> — a {result.returnPctToBreakeven.toFixed(1)}% return on your capital</>
-                )}
-                .
-              </>
-            ) : (
-              <>
-                The bundled credit for {tierName(tier.pkg.code)} isn't published yet. Once it is,
-                this shows exactly how much copied profit the {PLATFORM_CUT_PCT}% platform cut has
-                to consume before the credit is used up.
-              </>
-            )}
-          </p>
+      <div className="mt-4 rounded-lg border border-primary/40 bg-primary/5 p-3.5">
+        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-primary">
+          <Sparkles className="h-3 w-3" /> Profit needed to consume that top-up
         </div>
-
-        <div className="rounded-lg border border-border bg-background/40 p-3.5">
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
-            <ShieldAlert className="h-3 w-3" /> If you wait
-          </div>
-          <div className="mt-1.5 font-mono text-2xl font-semibold text-muted-foreground">
-            {result.topup !== null ? `-$${result.topup.toFixed(2)}` : "—"}
-          </div>
-          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-            No credit, no roster slot, and no track record building on{" "}
-            {capitalValue > 0 ? (
-              <span className="font-mono text-foreground">${capitalValue.toFixed(0)}</span>
-            ) : (
-              "your capital"
-            )}{" "}
-            while you decide. Every idle day is{" "}
-            <span className="font-mono text-foreground">${tier.perDay.toFixed(2)}</span> of
-            already-cheap infrastructure you aren't using.
-          </p>
+        <div className="mt-1.5 font-mono text-2xl font-semibold">
+          {result.profitToBreakeven !== null ? `$${result.profitToBreakeven.toFixed(2)}` : "—"}
         </div>
+        <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+          {result.topup !== null ? (
+            <>
+              Add <span className="font-mono text-foreground">${result.topup.toFixed(2)}</span> to
+              your wallet, and the {PLATFORM_CUT_PCT}% platform cut only finishes eating into it
+              after your copied trades net{" "}
+              <span className="font-mono text-foreground">
+                ${result.profitToBreakeven?.toFixed(2)}
+              </span>{" "}
+              of profit
+              {result.returnPctToBreakeven !== null && (
+                <> — a {result.returnPctToBreakeven.toFixed(1)}% return on your stated capital</>
+              )}
+              .
+            </>
+          ) : (
+            <>Enter a top-up amount above to see how much profit it takes to consume it.</>
+          )}
+        </p>
       </div>
 
       <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
-        Illustrative only. Copied results vary by master, sizing mode and broker execution — nothing
-        here is a projection of your returns.
+        Illustrative only. This is separate from any package's subscription price — copied results
+        vary by master, sizing mode and broker execution, and nothing here is a projection of your
+        returns.
       </p>
     </section>
   );
