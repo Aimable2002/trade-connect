@@ -136,7 +136,10 @@ export const publicMastersQueryOptions = () =>
 
       const ids = profiles.map((p) => p.account_id);
       const [liveRes, subsRes] = await Promise.all([
-        supabase.from("live_account_state").select("account_id,balance,equity").in("account_id", ids),
+        supabase
+          .from("live_account_state")
+          .select("account_id,balance,equity")
+          .in("account_id", ids),
         supabase
           .from("subscriptions")
           .select("master_account_id,active")

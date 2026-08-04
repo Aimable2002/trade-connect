@@ -24,7 +24,6 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-
 function Landing() {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
@@ -215,7 +214,6 @@ function LivePreviewCard() {
         )}
         {data &&
           hasFeed &&
-
           data.top.map((r) => (
             <div
               key={r.id}
@@ -346,7 +344,6 @@ function Brokers() {
     </section>
   );
 }
-
 
 /* ---------------- how it works ---------------- */
 
@@ -504,12 +501,20 @@ function PricingPreview() {
     {
       name: "Flex",
       blurb: "One month, no commitment.",
-      points: ["Try it on a live account", "Cancel at the end of the cycle", "Same feed, same infra"],
+      points: [
+        "Try it on a live account",
+        "Cancel at the end of the cycle",
+        "Same feed, same infra",
+      ],
     },
     {
       name: "Momentum",
       blurb: "Long enough to judge a real track record.",
-      points: ["A full quarter of copying", "Lower cost per day than Flex", "Switch masters anytime"],
+      points: [
+        "A full quarter of copying",
+        "Lower cost per day than Flex",
+        "Switch masters anytime",
+      ],
     },
     {
       name: "Compounder",

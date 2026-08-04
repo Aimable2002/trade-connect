@@ -558,8 +558,8 @@ function BillingStatusCard({
 
       {isGrace && (
         <div className="border-t border-warning/30 px-4 py-3 text-[11px] leading-relaxed text-warning md:px-5">
-          Grace period — top up your wallet so the next renewal goes through automatically.
-          Copying keeps running until the grace window closes.
+          Grace period — top up your wallet so the next renewal goes through automatically. Copying
+          keeps running until the grace window closes.
         </div>
       )}
 
@@ -719,9 +719,8 @@ function PackageRow({
           <Gift className="h-3.5 w-3.5 text-primary" />
           {topup !== null ? (
             <>
-              Includes a{" "}
-              <span className="font-mono text-foreground">${topup.toFixed(2)}</span> wallet credit
-              on selection
+              Includes a <span className="font-mono text-foreground">${topup.toFixed(2)}</span>{" "}
+              wallet credit on selection
             </>
           ) : (
             <>Selecting or switching bundles a wallet credit — amount announced at launch</>
@@ -859,8 +858,8 @@ function BreakevenCalculator({
       </div>
 
       <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
-        Illustrative only. Copied results vary by master, sizing mode and broker execution —
-        nothing here is a projection of your returns.
+        Illustrative only. Copied results vary by master, sizing mode and broker execution — nothing
+        here is a projection of your returns.
       </p>
     </section>
   );
