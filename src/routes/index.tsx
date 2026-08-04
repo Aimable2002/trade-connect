@@ -2,7 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { formatLatency, publicStatsQueryOptions } from "@/lib/public-stats";
+import {
+  formatLatency,
+  publicMastersQueryOptions,
+  publicStatsQueryOptions,
+} from "@/lib/public-stats";
 import {
   Activity,
   ArrowRight,
@@ -11,6 +15,7 @@ import {
   ShieldCheck,
   Sparkles,
   TrendingUp,
+  Trophy,
   Users,
   Wallet,
 } from "lucide-react";
@@ -58,6 +63,7 @@ function Landing() {
       <HowItWorks />
       <Features />
       <Brokers />
+      <TopMasters />
       <PricingPreview />
 
       <FinalCta />
@@ -436,23 +442,85 @@ function Features() {
 
 /* ---------------- pricing preview ---------------- */
 
+function TopMasters() {
+  const { data } = useQuery(publicMastersQueryOptions());
+  if (!data || data.length === 0) return null;
+
+  return (
+    <section className="border-y border-border bg-card/30">
+      <div className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-20">
+        <SectionHeading eyebrow="Top masters" title="See who's growing right now" />
+        <p className="mx-auto mt-3 max-w-xl text-center text-xs text-muted-foreground">
+          Public masters, ordered by open unrealised P&amp;L on their own account. Live figures
+          straight from the feed — no curated screenshots, no cherry-picked months.
+        </p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {data.map((m) => (
+            <div key={m.accountId} className="rounded-lg border border-border bg-card p-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <span className="truncate text-sm font-semibold">{m.displayName}</span>
+              </div>
+              <div
+                className={`mt-3 font-mono text-xl font-semibold ${
+                  m.openPnl === null
+                    ? "text-muted-foreground"
+                    : m.openPnl >= 0
+                      ? "text-profit"
+                      : "text-loss"
+                }`}
+              >
+                {m.openPnl === null
+                  ? "—"
+                  : `${m.openPnl >= 0 ? "+" : "-"}$${Math.abs(m.openPnl).toFixed(2)}`}
+              </div>
+              <div className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+                Open P&amp;L
+              </div>
+              <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Users className="h-3 w-3" /> {m.followers} follower
+                {m.followers === 1 ? "" : "s"}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <Link
+            to="/leaderboard"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+          >
+            See the full leaderboard <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- pricing preview ---------------- */
+
 function PricingPreview() {
   const tiers = [
     {
-      name: "Starter",
-      blurb: "One master, one follower account.",
-      points: ["1 roster slot", "Standard infra fee", "Email support"],
+      name: "Flex",
+      blurb: "One month, no commitment.",
+      points: ["Try it on a live account", "Cancel at the end of the cycle", "Same feed, same infra"],
     },
     {
-      name: "Growth",
-      blurb: "For running a small copy-trading portfolio.",
-      points: ["Multiple roster slots", "Switch masters anytime", "Priority infra"],
+      name: "Momentum",
+      blurb: "Long enough to judge a real track record.",
+      points: ["A full quarter of copying", "Lower cost per day than Flex", "Switch masters anytime"],
+    },
+    {
+      name: "Compounder",
+      blurb: "The tier that widens your roster.",
+      points: ["Extra roster slot", "Run several masters at once", "Better per-day economics"],
       highlighted: true,
     },
     {
-      name: "Pro",
-      blurb: "Higher roster ceiling, built for scale.",
-      points: ["Largest roster size", "Lowest per-slot fee", "Priority support"],
+      name: "All-In",
+      blurb: "For followers who already know this works.",
+      points: ["Longest commitment", "Lowest cost per day", "Set it and let it compound"],
     },
   ];
   return (
@@ -460,10 +528,11 @@ function PricingPreview() {
       <SectionHeading eyebrow="Pricing" title="Simple wallet-based billing, no surprise charges" />
       <p className="mx-auto mt-3 max-w-xl text-center text-xs text-muted-foreground">
         Pricing is per follower account: a small infra fee plus a per-slot fee for each master you
-        run. Exact package pricing is shown live in the app once you're signed in — packages can
-        change, and we'd rather show you real numbers than stale marketing copy.
+        run, and the longer the cycle the less it costs per day. Exact package pricing is shown live
+        in the app once you're signed in — packages can change, and we'd rather show you real
+        numbers than stale marketing copy.
       </p>
-      <div className="mt-10 grid gap-4 md:grid-cols-3">
+      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {tiers.map((t) => (
           <div
             key={t.name}
