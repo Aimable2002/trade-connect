@@ -19,6 +19,7 @@ import { Route as AppMastersRouteImport } from './routes/_app.masters'
 import { Route as AppLeaderboardRouteImport } from './routes/_app.leaderboard'
 import { Route as AppHistoryRouteImport } from './routes/_app.history'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppCheckoutRouteImport } from './routes/_app.checkout'
 import { Route as AppChallengesRouteImport } from './routes/_app.challenges'
 import { Route as AppChallengesIndexRouteImport } from './routes/_app.challenges.index'
 import { Route as AppAdminIndexRouteImport } from './routes/_app.admin.index'
@@ -76,6 +77,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCheckoutRoute = AppCheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppChallengesRoute = AppChallengesRouteImport.update({
   id: '/challenges',
   path: '/challenges',
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/challenges': typeof AppChallengesRouteWithChildren
+  '/checkout': typeof AppCheckoutRoute
   '/dashboard': typeof AppDashboardRoute
   '/history': typeof AppHistoryRoute
   '/leaderboard': typeof AppLeaderboardRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/checkout': typeof AppCheckoutRoute
   '/dashboard': typeof AppDashboardRoute
   '/history': typeof AppHistoryRoute
   '/leaderboard': typeof AppLeaderboardRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/_app/challenges': typeof AppChallengesRouteWithChildren
+  '/_app/checkout': typeof AppCheckoutRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/history': typeof AppHistoryRoute
   '/_app/leaderboard': typeof AppLeaderboardRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/challenges'
+    | '/checkout'
     | '/dashboard'
     | '/history'
     | '/leaderboard'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/checkout'
     | '/dashboard'
     | '/history'
     | '/leaderboard'
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/auth'
     | '/_app/challenges'
+    | '/_app/checkout'
     | '/_app/dashboard'
     | '/_app/history'
     | '/_app/leaderboard'
@@ -302,6 +314,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/checkout': {
+      id: '/_app/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof AppCheckoutRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/challenges': {
       id: '/_app/challenges'
       path: '/challenges'
@@ -370,6 +389,7 @@ const AppChallengesRouteWithChildren = AppChallengesRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppChallengesRoute: typeof AppChallengesRouteWithChildren
+  AppCheckoutRoute: typeof AppCheckoutRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppHistoryRoute: typeof AppHistoryRoute
   AppLeaderboardRoute: typeof AppLeaderboardRoute
@@ -385,6 +405,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppChallengesRoute: AppChallengesRouteWithChildren,
+  AppCheckoutRoute: AppCheckoutRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppHistoryRoute: AppHistoryRoute,
   AppLeaderboardRoute: AppLeaderboardRoute,
@@ -408,13 +429,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
