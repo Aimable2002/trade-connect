@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
+  getActiveAccountsQuery,
   supabase,
   type AccountRow,
   type LiveAccountState,
@@ -38,11 +39,10 @@ export const accountsQueryOptions = () =>
   queryOptions({
     queryKey: ["accounts"],
     queryFn: async (): Promise<AccountRow[]> => {
-      const { data, error } = await supabase
-        .from("accounts")
-        .select("*")
-        .neq("status", "closed")
+      const { data, error } = await getActiveAccountsQuery("*")
+        .neq("status", "failed")
         .order("created_at", { ascending: false });
+
       if (error) throw error;
       return (data ?? []) as AccountRow[];
     },

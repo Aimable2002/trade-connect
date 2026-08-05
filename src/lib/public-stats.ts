@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { supabase, type AccountRow, type LiveAccountState } from "./supabase";
+import { getActiveAccountsQuery, supabase, type AccountRow, type LiveAccountState } from "./supabase";
 
 export interface PublicStats {
   masters: number;
@@ -35,7 +35,7 @@ export const publicStatsQueryOptions = () =>
     retry: false,
     queryFn: async (): Promise<PublicStats> => {
       const [accountsRes, liveRes] = await Promise.all([
-        supabase.from("accounts").select("account_id,role,status"),
+        getActiveAccountsQuery("account_id,role,status"),
         supabase
           .from("live_account_state")
           .select("account_id,balance,equity,open_positions,updated_at"),

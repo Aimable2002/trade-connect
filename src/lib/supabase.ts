@@ -17,6 +17,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   },
 });
 
+export const getActiveAccountsQuery = (select = "*") =>
+  supabase.from("accounts").select(select).neq("status", "closed");
+
 export type AccountRole = "master" | "follower";
 export type AccountStatus = "live" | "offline" | "paused" | "pending" | string;
 export type SizingMode =
