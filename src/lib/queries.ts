@@ -44,7 +44,7 @@ export const accountsQueryOptions = () =>
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data ?? []) as AccountRow[];
+      return (data ?? []) as unknown as AccountRow[];
     },
   });
 

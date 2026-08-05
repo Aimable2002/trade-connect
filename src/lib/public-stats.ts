@@ -41,7 +41,7 @@ export const publicStatsQueryOptions = () =>
           .select("account_id,balance,equity,open_positions,updated_at"),
       ]);
 
-      const accounts = (accountsRes.data ?? []) as AccountRow[];
+      const accounts = (accountsRes.data ?? []) as unknown as AccountRow[];
       const live = (liveRes.data ?? []) as LiveAccountState[];
 
       const roleOf = new Map(accounts.map((a) => [a.account_id, a.role]));
