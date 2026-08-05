@@ -482,3 +482,83 @@ export const getChallengeHistory = (accountId: string) =>
     `/masters/${accountId}/challenges/history`,
     { method: "GET", timeoutMs: 15_000 },
   );
+
+// -------- Payments (Flutterwave, backend-handled) --------
+//
+// Prices in this product are denominated in USD. The backend owns the FX
+// conversion and the Flutterwave call; the frontend only asks what a given
+// USD amount costs in the payer's currency and then hands off to the hosted
+// checkout link the backend returns. Route names below are ours to choose —
+// they must be implemented server-side to match.
+
+export type PaymentMethod = "card" | "mobilemoney" | "banktransfer";
+
+export interface PaymentCurrency {
+  code: string;
+  name: string;
+  /** Units of this currency per 1 USD. `null` = backend prices at checkout. */
+  rate_per_usd: number | null;
+  mobile_money: boolean;
+  country?: string;
+}
+
+export type PaymentPurpose = "wallet_topup" | "package";
+
+export interface CreatePaymentInput {
+  account_id: string;
+  purpose: PaymentPurpose;
+  /** Required for wallet_topup. For `package` the backend prices the package. */
+  amount_usd?: number;
+  package_code?: string;
+  currency: string;
+  method: PaymentMethod;
+  /** Mobile money only. */
+  phone_number?: string;
+  network?: string;
+  /** Where Flutterwave should send the payer back to. */
+  redirect_url: string;
+}
+
+export type PaymentStatus = "pending" | "successful" | "failed" | "cancelled" | string;
+
+export interface PaymentIntent {
+  reference: string;
+  status: PaymentStatus;
+  amount_usd: number;
+  amount_charged: number;
+  currency: string;
+  method: PaymentMethod;
+  /** Hosted Flutterwave checkout to redirect to (absent for some MoMo flows). */
+  checkout_url?: string | null;
+  /** Set once the wallet/billing side effect has been applied. */
+  credited?: boolean;
+  message?: string | null;
+}
+
+export const getPaymentCurrencies = () =>
+  authedFetch<{ currencies: PaymentCurrency[] }>("/payments/currencies", {
+    method: "GET",
+    timeoutMs: 15_000,
+  }).then((r) => r.currencies ?? []);
+
+export const quotePayment = (input: {
+  amount_usd: number;
+  currency: string;
+}) =>
+  authedFetch<{ amount_usd: number; amount_charged: number; currency: string; rate: number }>(
+    "/payments/quote",
+    { method: "POST", body: input, timeoutMs: 15_000 },
+  );
+
+export const createPayment = (input: CreatePaymentInput) =>
+  authedFetch<PaymentIntent>("/payments/checkout", {
+    method: "POST",
+    body: input,
+    timeoutMs: 30_000,
+  });
+
+export const getPayment = (reference: string) =>
+  authedFetch<PaymentIntent>(`/payments/${reference}`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
