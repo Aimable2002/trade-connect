@@ -442,8 +442,7 @@ function WalletCard({
               <button
                 key={v}
                 onClick={() => submitAmount(v)}
-                disabled={topup.isPending}
-                className="flex items-center justify-center gap-1 rounded-lg border border-border bg-card py-3 text-sm font-semibold transition-colors active:border-primary hover:border-primary/60 disabled:opacity-40"
+                className="flex items-center justify-center gap-1 rounded-lg border border-border bg-card py-3 text-sm font-semibold transition-colors active:border-primary hover:border-primary/60"
               >
                 <Plus className="h-3.5 w-3.5 text-primary" />
                 {v}
@@ -467,19 +466,18 @@ function WalletCard({
               className="min-w-0 rounded-lg border border-border bg-input px-3 py-3 font-mono text-sm outline-none focus:border-primary"
             />
             <button
-              disabled={topup.isPending || !amount}
+              disabled={!amount}
               className="shrink-0 rounded-lg bg-primary px-5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
             >
-              {topup.isPending ? "Adding…" : "Add"}
+              Continue
             </button>
           </form>
 
           <div className="mt-3 flex items-start gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
             <InfoIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              Payments aren't wired up to a processor yet — top-ups are applied to your balance
-              directly. Real card/bank payment is coming; this is a manual placeholder so you can
-              test billing end-to-end.
+              Balances are held in USD. On the next screen you pick your currency and pay by card or
+              mobile money — you'll see the exact local total before confirming.
             </span>
           </div>
         </div>
