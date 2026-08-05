@@ -8,7 +8,7 @@ import {
   walletQueryOptions,
   walletTxQueryOptions,
 } from "@/lib/queries";
-import { ApiError, reactivateBilling, selectPackage, topupWallet } from "@/lib/api";
+import { ApiError, reactivateBilling, selectPackage } from "@/lib/api";
 import {
   breakeven,
   buildTierInsights,
