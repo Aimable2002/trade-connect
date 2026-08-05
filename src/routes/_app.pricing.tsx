@@ -389,25 +389,20 @@ function WalletCard({
   isLoading: boolean;
   error: unknown;
 }) {
-  const qc = useQueryClient();
+  const navigate = useNavigate();
   const [amount, setAmount] = useState<string>("");
 
-  const topup = useMutation({
-    mutationFn: (a: number) => topupWallet(accountId, a),
-    onSuccess: (w) => {
-      toast.success(`Wallet topped up — new balance $${w.balance.toFixed(2)}.`);
-      setAmount("");
-      qc.invalidateQueries({ queryKey: ["accounts", accountId, "wallet"] });
-    },
-    onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message),
-  });
-
+  // Money-in always goes through the hosted checkout (card / mobile money);
+  // the wallet is only credited once the processor confirms.
   const submitAmount = (n: number) => {
     if (!isFinite(n) || n <= 0) {
       toast.error("Enter a positive amount.");
       return;
     }
-    topup.mutate(n);
+    navigate({
+      to: "/checkout",
+      search: { accountId, purpose: "wallet_topup" as const, amount: n },
+    });
   };
 
   return (
