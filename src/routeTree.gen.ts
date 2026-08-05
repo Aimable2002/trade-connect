@@ -19,9 +19,11 @@ import { Route as AppMastersRouteImport } from './routes/_app.masters'
 import { Route as AppLeaderboardRouteImport } from './routes/_app.leaderboard'
 import { Route as AppHistoryRouteImport } from './routes/_app.history'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppCheckoutRouteImport } from './routes/_app.checkout'
 import { Route as AppChallengesRouteImport } from './routes/_app.challenges'
 import { Route as AppChallengesIndexRouteImport } from './routes/_app.challenges.index'
 import { Route as AppAdminIndexRouteImport } from './routes/_app.admin.index'
+import { Route as AppPaymentsReferenceRouteImport } from './routes/_app.payments.$reference'
 import { Route as AppInsightAccountIdRouteImport } from './routes/_app.insight.$accountId'
 import { Route as AppChallengesHistoryRouteImport } from './routes/_app.challenges.history'
 import { Route as AppAdminChallengesRouteImport } from './routes/_app.admin.challenges'
@@ -76,6 +78,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCheckoutRoute = AppCheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppChallengesRoute = AppChallengesRouteImport.update({
   id: '/challenges',
   path: '/challenges',
@@ -89,6 +96,11 @@ const AppChallengesIndexRoute = AppChallengesIndexRouteImport.update({
 const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPaymentsReferenceRoute = AppPaymentsReferenceRouteImport.update({
+  id: '/payments/$reference',
+  path: '/payments/$reference',
   getParentRoute: () => AppRoute,
 } as any)
 const AppInsightAccountIdRoute = AppInsightAccountIdRouteImport.update({
@@ -116,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/challenges': typeof AppChallengesRouteWithChildren
+  '/checkout': typeof AppCheckoutRoute
   '/dashboard': typeof AppDashboardRoute
   '/history': typeof AppHistoryRoute
   '/leaderboard': typeof AppLeaderboardRoute
@@ -127,12 +140,14 @@ export interface FileRoutesByFullPath {
   '/admin/challenges': typeof AppAdminChallengesRoute
   '/challenges/history': typeof AppChallengesHistoryRoute
   '/insight/$accountId': typeof AppInsightAccountIdRoute
+  '/payments/$reference': typeof AppPaymentsReferenceRoute
   '/admin/': typeof AppAdminIndexRoute
   '/challenges/': typeof AppChallengesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/checkout': typeof AppCheckoutRoute
   '/dashboard': typeof AppDashboardRoute
   '/history': typeof AppHistoryRoute
   '/leaderboard': typeof AppLeaderboardRoute
@@ -144,6 +159,7 @@ export interface FileRoutesByTo {
   '/admin/challenges': typeof AppAdminChallengesRoute
   '/challenges/history': typeof AppChallengesHistoryRoute
   '/insight/$accountId': typeof AppInsightAccountIdRoute
+  '/payments/$reference': typeof AppPaymentsReferenceRoute
   '/admin': typeof AppAdminIndexRoute
   '/challenges': typeof AppChallengesIndexRoute
 }
@@ -153,6 +169,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/_app/challenges': typeof AppChallengesRouteWithChildren
+  '/_app/checkout': typeof AppCheckoutRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/history': typeof AppHistoryRoute
   '/_app/leaderboard': typeof AppLeaderboardRoute
@@ -164,6 +181,7 @@ export interface FileRoutesById {
   '/_app/admin/challenges': typeof AppAdminChallengesRoute
   '/_app/challenges/history': typeof AppChallengesHistoryRoute
   '/_app/insight/$accountId': typeof AppInsightAccountIdRoute
+  '/_app/payments/$reference': typeof AppPaymentsReferenceRoute
   '/_app/admin/': typeof AppAdminIndexRoute
   '/_app/challenges/': typeof AppChallengesIndexRoute
 }
@@ -173,6 +191,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/challenges'
+    | '/checkout'
     | '/dashboard'
     | '/history'
     | '/leaderboard'
@@ -184,12 +203,14 @@ export interface FileRouteTypes {
     | '/admin/challenges'
     | '/challenges/history'
     | '/insight/$accountId'
+    | '/payments/$reference'
     | '/admin/'
     | '/challenges/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/checkout'
     | '/dashboard'
     | '/history'
     | '/leaderboard'
@@ -201,6 +222,7 @@ export interface FileRouteTypes {
     | '/admin/challenges'
     | '/challenges/history'
     | '/insight/$accountId'
+    | '/payments/$reference'
     | '/admin'
     | '/challenges'
   id:
@@ -209,6 +231,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/auth'
     | '/_app/challenges'
+    | '/_app/checkout'
     | '/_app/dashboard'
     | '/_app/history'
     | '/_app/leaderboard'
@@ -220,6 +243,7 @@ export interface FileRouteTypes {
     | '/_app/admin/challenges'
     | '/_app/challenges/history'
     | '/_app/insight/$accountId'
+    | '/_app/payments/$reference'
     | '/_app/admin/'
     | '/_app/challenges/'
   fileRoutesById: FileRoutesById
@@ -302,6 +326,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/checkout': {
+      id: '/_app/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof AppCheckoutRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/challenges': {
       id: '/_app/challenges'
       path: '/challenges'
@@ -321,6 +352,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/payments/$reference': {
+      id: '/_app/payments/$reference'
+      path: '/payments/$reference'
+      fullPath: '/payments/$reference'
+      preLoaderRoute: typeof AppPaymentsReferenceRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/insight/$accountId': {
@@ -370,6 +408,7 @@ const AppChallengesRouteWithChildren = AppChallengesRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppChallengesRoute: typeof AppChallengesRouteWithChildren
+  AppCheckoutRoute: typeof AppCheckoutRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppHistoryRoute: typeof AppHistoryRoute
   AppLeaderboardRoute: typeof AppLeaderboardRoute
@@ -380,11 +419,13 @@ interface AppRouteChildren {
   AppAccountsAccountIdRoute: typeof AppAccountsAccountIdRoute
   AppAdminChallengesRoute: typeof AppAdminChallengesRoute
   AppInsightAccountIdRoute: typeof AppInsightAccountIdRoute
+  AppPaymentsReferenceRoute: typeof AppPaymentsReferenceRoute
   AppAdminIndexRoute: typeof AppAdminIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppChallengesRoute: AppChallengesRouteWithChildren,
+  AppCheckoutRoute: AppCheckoutRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppHistoryRoute: AppHistoryRoute,
   AppLeaderboardRoute: AppLeaderboardRoute,
@@ -395,6 +436,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAccountsAccountIdRoute: AppAccountsAccountIdRoute,
   AppAdminChallengesRoute: AppAdminChallengesRoute,
   AppInsightAccountIdRoute: AppInsightAccountIdRoute,
+  AppPaymentsReferenceRoute: AppPaymentsReferenceRoute,
   AppAdminIndexRoute: AppAdminIndexRoute,
 }
 
@@ -408,13 +450,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

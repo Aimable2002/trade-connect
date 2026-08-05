@@ -8,7 +8,7 @@ import {
   walletQueryOptions,
   walletTxQueryOptions,
 } from "@/lib/queries";
-import { ApiError, reactivateBilling, selectPackage, topupWallet } from "@/lib/api";
+import { ApiError, reactivateBilling, selectPackage } from "@/lib/api";
 import {
   breakeven,
   buildTierInsights,
@@ -265,7 +265,9 @@ function PricingForAccount({
         onClose={() => setConfirmTier(null)}
         onConfirm={(code) => pick.mutate(code)}
         pending={pick.isPending}
-        isReactivation={confirmTier ? confirmTier.pkg.code === currentPkg && billingStatus === "closed" : false}
+        isReactivation={
+          confirmTier ? confirmTier.pkg.code === currentPkg && billingStatus === "closed" : false
+        }
       />
     </div>
   );
@@ -300,9 +302,10 @@ function ConfirmPackageModal({
             </span>
           </div>
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-            This is the recurring charge — you'll pay <span className="font-mono text-foreground">${price.toFixed(2)}</span> again
-            every {pkg.duration_days}-day cycle for as long as this package renews, deducted from
-            your wallet balance.
+            This is the recurring charge — you'll pay{" "}
+            <span className="font-mono text-foreground">${price.toFixed(2)}</span> again every{" "}
+            {pkg.duration_days}-day cycle for as long as this package renews, deducted from your
+            wallet balance.
           </p>
         </div>
 
@@ -338,7 +341,13 @@ function ConfirmPackageModal({
             disabled={pending}
             className="rounded-md bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
           >
-            {pending ? (isReactivation ? "Reactivating…" : "Confirming…") : isReactivation ? "Reactivate" : "Confirm & activate"}
+            {pending
+              ? isReactivation
+                ? "Reactivating…"
+                : "Confirming…"
+              : isReactivation
+                ? "Reactivate"
+                : "Confirm & activate"}
           </button>
         </div>
       </div>
@@ -389,25 +398,20 @@ function WalletCard({
   isLoading: boolean;
   error: unknown;
 }) {
-  const qc = useQueryClient();
+  const navigate = useNavigate();
   const [amount, setAmount] = useState<string>("");
 
-  const topup = useMutation({
-    mutationFn: (a: number) => topupWallet(accountId, a),
-    onSuccess: (w) => {
-      toast.success(`Wallet topped up — new balance $${w.balance.toFixed(2)}.`);
-      setAmount("");
-      qc.invalidateQueries({ queryKey: ["accounts", accountId, "wallet"] });
-    },
-    onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message),
-  });
-
+  // Money-in always goes through the hosted checkout (card / mobile money);
+  // the wallet is only credited once the processor confirms.
   const submitAmount = (n: number) => {
     if (!isFinite(n) || n <= 0) {
       toast.error("Enter a positive amount.");
       return;
     }
-    topup.mutate(n);
+    navigate({
+      to: "/checkout",
+      search: { accountId, purpose: "wallet_topup" as const, amount: n },
+    });
   };
 
   return (
@@ -447,8 +451,7 @@ function WalletCard({
               <button
                 key={v}
                 onClick={() => submitAmount(v)}
-                disabled={topup.isPending}
-                className="flex items-center justify-center gap-1 rounded-lg border border-border bg-card py-3 text-sm font-semibold transition-colors active:border-primary hover:border-primary/60 disabled:opacity-40"
+                className="flex items-center justify-center gap-1 rounded-lg border border-border bg-card py-3 text-sm font-semibold transition-colors active:border-primary hover:border-primary/60"
               >
                 <Plus className="h-3.5 w-3.5 text-primary" />
                 {v}
@@ -472,19 +475,18 @@ function WalletCard({
               className="min-w-0 rounded-lg border border-border bg-input px-3 py-3 font-mono text-sm outline-none focus:border-primary"
             />
             <button
-              disabled={topup.isPending || !amount}
+              disabled={!amount}
               className="shrink-0 rounded-lg bg-primary px-5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
             >
-              {topup.isPending ? "Adding…" : "Add"}
+              Continue
             </button>
           </form>
 
           <div className="mt-3 flex items-start gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
             <InfoIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              Payments aren't wired up to a processor yet — top-ups are applied to your balance
-              directly. Real card/bank payment is coming; this is a manual placeholder so you can
-              test billing end-to-end.
+              Balances are held in USD. On the next screen you pick your currency and pay by card or
+              mobile money — you'll see the exact local total before confirming.
             </span>
           </div>
         </div>
@@ -854,8 +856,8 @@ function BreakevenCalculator({ walletBalance }: { walletBalance: number | undefi
       </div>
       <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
         Whatever you add to your wallet, the platform only takes {PLATFORM_CUT_PCT}% of copied
-        profit — never a cut of your capital. This shows how much profit needs to run through
-        before that {PLATFORM_CUT_PCT}% cut has consumed the amount you added.
+        profit — never a cut of your capital. This shows how much profit needs to run through before
+        that {PLATFORM_CUT_PCT}% cut has consumed the amount you added.
       </p>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
