@@ -145,14 +145,10 @@ function CheckoutPage() {
   });
 
   const invalid =
-    !accountId ||
-    amountUsd <= 0 ||
-    (method === "mobilemoney" && phone.trim().length < 8);
+    !accountId || amountUsd <= 0 || (method === "mobilemoney" && phone.trim().length < 8);
 
   const title =
-    purpose === "package"
-      ? `${pkg ? tierName(pkg) : "Package"} subscription`
-      : "Wallet top-up";
+    purpose === "package" ? `${pkg ? tierName(pkg) : "Package"} subscription` : "Wallet top-up";
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-5 p-4 pb-32 md:p-8">
@@ -237,7 +233,9 @@ function CheckoutPage() {
                   active ? "border-primary bg-primary/10" : "border-border bg-background/40",
                 )}
               >
-                <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+                <Icon
+                  className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")}
+                />
                 <span className="flex-1 text-sm font-semibold">{METHOD_LABEL[m]}</span>
                 {active && <Check className="h-4 w-4 text-primary" />}
               </button>

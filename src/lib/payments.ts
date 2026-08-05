@@ -12,12 +12,30 @@ export const FALLBACK_CURRENCIES: PaymentCurrency[] = [
   { code: "RWF", name: "Rwandan Franc", rate_per_usd: null, mobile_money: true, country: "RW" },
   { code: "KES", name: "Kenyan Shilling", rate_per_usd: null, mobile_money: true, country: "KE" },
   { code: "UGX", name: "Ugandan Shilling", rate_per_usd: null, mobile_money: true, country: "UG" },
-  { code: "TZS", name: "Tanzanian Shilling", rate_per_usd: null, mobile_money: true, country: "TZ" },
+  {
+    code: "TZS",
+    name: "Tanzanian Shilling",
+    rate_per_usd: null,
+    mobile_money: true,
+    country: "TZ",
+  },
   { code: "GHS", name: "Ghanaian Cedi", rate_per_usd: null, mobile_money: true, country: "GH" },
-  { code: "XAF", name: "Central African CFA", rate_per_usd: null, mobile_money: true, country: "CM" },
+  {
+    code: "XAF",
+    name: "Central African CFA",
+    rate_per_usd: null,
+    mobile_money: true,
+    country: "CM",
+  },
   { code: "XOF", name: "West African CFA", rate_per_usd: null, mobile_money: true, country: "CI" },
   { code: "NGN", name: "Nigerian Naira", rate_per_usd: null, mobile_money: false, country: "NG" },
-  { code: "ZAR", name: "South African Rand", rate_per_usd: null, mobile_money: false, country: "ZA" },
+  {
+    code: "ZAR",
+    name: "South African Rand",
+    rate_per_usd: null,
+    mobile_money: false,
+    country: "ZA",
+  },
 ];
 
 /** Mobile-money networks Flutterwave exposes, keyed by currency. */

@@ -265,7 +265,9 @@ function PricingForAccount({
         onClose={() => setConfirmTier(null)}
         onConfirm={(code) => pick.mutate(code)}
         pending={pick.isPending}
-        isReactivation={confirmTier ? confirmTier.pkg.code === currentPkg && billingStatus === "closed" : false}
+        isReactivation={
+          confirmTier ? confirmTier.pkg.code === currentPkg && billingStatus === "closed" : false
+        }
       />
     </div>
   );
@@ -300,9 +302,10 @@ function ConfirmPackageModal({
             </span>
           </div>
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-            This is the recurring charge — you'll pay <span className="font-mono text-foreground">${price.toFixed(2)}</span> again
-            every {pkg.duration_days}-day cycle for as long as this package renews, deducted from
-            your wallet balance.
+            This is the recurring charge — you'll pay{" "}
+            <span className="font-mono text-foreground">${price.toFixed(2)}</span> again every{" "}
+            {pkg.duration_days}-day cycle for as long as this package renews, deducted from your
+            wallet balance.
           </p>
         </div>
 
@@ -338,7 +341,13 @@ function ConfirmPackageModal({
             disabled={pending}
             className="rounded-md bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
           >
-            {pending ? (isReactivation ? "Reactivating…" : "Confirming…") : isReactivation ? "Reactivate" : "Confirm & activate"}
+            {pending
+              ? isReactivation
+                ? "Reactivating…"
+                : "Confirming…"
+              : isReactivation
+                ? "Reactivate"
+                : "Confirm & activate"}
           </button>
         </div>
       </div>
@@ -847,8 +856,8 @@ function BreakevenCalculator({ walletBalance }: { walletBalance: number | undefi
       </div>
       <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
         Whatever you add to your wallet, the platform only takes {PLATFORM_CUT_PCT}% of copied
-        profit — never a cut of your capital. This shows how much profit needs to run through
-        before that {PLATFORM_CUT_PCT}% cut has consumed the amount you added.
+        profit — never a cut of your capital. This shows how much profit needs to run through before
+        that {PLATFORM_CUT_PCT}% cut has consumed the amount you added.
       </p>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
