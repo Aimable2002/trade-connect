@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import { TradesTable } from "@/components/TradesTable";
 import { PatientLoader, ErrorState } from "@/components/DataState";
 
-
 export const Route = createFileRoute("/_app/history")({
   component: History,
 });
@@ -95,7 +94,6 @@ function AccountTrades({ accountId }: { accountId: string }) {
     </div>
   );
 }
-
 
 function FilterChip({
   label,

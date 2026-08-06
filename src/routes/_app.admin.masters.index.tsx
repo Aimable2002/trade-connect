@@ -102,7 +102,10 @@ function AdminMastersContent() {
 
       {isLoading && <PatientLoader label="Loading masters…" />}
       {error && (
-        <ErrorState message={`Couldn't load masters: ${(error as Error).message}`} onRetry={() => refetch()} />
+        <ErrorState
+          message={`Couldn't load masters: ${(error as Error).message}`}
+          onRetry={() => refetch()}
+        />
       )}
 
       {data && filtered.length === 0 && (

@@ -2,11 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, PowerOff } from "lucide-react";
 import { toast } from "sonner";
-import {
-  setAdminMasterPublic,
-  type AdminMasterDetail,
-  type AdminMasterListItem,
-} from "@/lib/api";
+import { setAdminMasterPublic, type AdminMasterDetail, type AdminMasterListItem } from "@/lib/api";
 import { adminMasterQueryOptions } from "@/lib/queries";
 import { AdminGate } from "@/components/AdminGate";
 import { ErrorState, PatientLoader } from "@/components/DataState";
@@ -130,11 +126,7 @@ function Content() {
               value={data.rate ? `${data.rate.platform_cut_percent}%` : "—"}
               sub="Of the master's fee"
             />
-            <Stat
-              label="Followers"
-              value={String(data.follower_count)}
-              sub="Currently copying"
-            />
+            <Stat label="Followers" value={String(data.follower_count)} sub="Currently copying" />
             <Stat
               label="Total earned"
               value={
@@ -204,15 +196,7 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function Stat({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: React.ReactNode;
-  sub: string;
-}) {
+function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub: string }) {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="text-[9px] uppercase tracking-widest text-muted-foreground">{label}</div>
