@@ -91,13 +91,22 @@ function AdminDashboardContent() {
             ADMIN CONSOLE
           </h1>
         </div>
-        <Link
-          to="/admin/challenges"
-          className="flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <Award className="h-3.5 w-3.5" /> Challenges
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            to="/admin/masters"
+            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Users className="h-3.5 w-3.5" /> Masters
+          </Link>
+          <Link
+            to="/admin/challenges"
+            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Award className="h-3.5 w-3.5" /> Challenges
+          </Link>
+        </div>
       </header>
+
 
       <PlaceholderBanner text="Mock analytics — nothing here is wired to live platform data yet." />
 

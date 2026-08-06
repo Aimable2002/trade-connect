@@ -8,7 +8,10 @@ import {
 } from "./supabase";
 import {
   getAccountTrades,
+  getAdminMaster,
+  getAdminMasters,
   getChallengeHistory,
+
   getChallengeStatus,
   getChallenges,
   getBilling,
@@ -21,7 +24,10 @@ import {
   getWallet,
   getWalletTransactions,
   ApiError,
+  type AdminMasterDetail,
+  type AdminMasterListItem,
   type Billing,
+
   type Challenge,
   type ChallengeHistoryResponse,
   type ChallengeStatusResponse,
@@ -221,4 +227,22 @@ export const challengeHistoryQueryOptions = (accountId: string | undefined) =>
     queryFn: (): Promise<ChallengeHistoryResponse> =>
       getChallengeHistory(accountId as string),
     staleTime: 30_000,
+  });
+
+// -------- Admin: master listings --------
+
+export const adminMastersQueryOptions = () =>
+  queryOptions({
+    queryKey: ["admin", "masters"],
+    queryFn: (): Promise<AdminMasterListItem[]> => getAdminMasters(),
+    staleTime: 15_000,
+  });
+
+export const adminMasterQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["admin", "masters", accountId],
+    enabled: !!accountId,
+    queryFn: (): Promise<AdminMasterDetail> => getAdminMaster(accountId as string),
+    staleTime: 15_000,
+    retry: false,
   });

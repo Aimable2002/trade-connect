@@ -562,3 +562,69 @@ export const getPayment = (reference: string) =>
     method: "GET",
     timeoutMs: 15_000,
   });
+
+// -------- Admin: master listing control --------
+//
+// These are admin-only routes: the backend independently re-verifies the
+// `app_metadata.is_admin` claim on the bearer token and returns 403 without
+// it, so the client-side <AdminGate> is UX, not the security boundary.
+// Deliberately kept separate from DirectoryMaster / MasterEarnings: the
+// public directory surface and the admin surface evolve independently.
+
+export interface AdminMasterListItem {
+  account_id: string;
+  display_name: string;
+  bio: string | null;
+  is_public: boolean;
+  account_status: string;
+  rate_percent: number | null;
+  follower_count: number;
+}
+
+export interface AdminMasterRate {
+  rate_percent: number;
+  platform_cut_percent: number;
+}
+
+export interface AdminMasterEarnings {
+  total_earned: number;
+  transaction_count: number;
+  recent: EarningEntry[];
+}
+
+export interface AdminMasterDetail {
+  account_id: string;
+  display_name: string;
+  bio: string | null;
+  is_public: boolean;
+  rate: AdminMasterRate | null;
+  earnings: AdminMasterEarnings;
+  follower_count: number;
+  trades: Deal[];
+  /** false when this master's MT5 terminal isn't live — `trades` is then []. */
+  agent_running: boolean;
+}
+
+export interface AdminMasterVisibility {
+  account_id: string;
+  is_public: boolean;
+}
+
+export const getAdminMasters = () =>
+  authedFetch<AdminMasterListItem[]>("/admin/masters", {
+    method: "GET",
+    timeoutMs: 20_000,
+  });
+
+export const getAdminMaster = (accountId: string) =>
+  authedFetch<AdminMasterDetail>(`/admin/masters/${accountId}`, {
+    method: "GET",
+    timeoutMs: 30_000,
+  });
+
+export const setAdminMasterPublic = (accountId: string, is_public: boolean) =>
+  authedFetch<AdminMasterVisibility>(`/admin/masters/${accountId}/public`, {
+    method: "POST",
+    body: { is_public },
+    timeoutMs: 15_000,
+  });
