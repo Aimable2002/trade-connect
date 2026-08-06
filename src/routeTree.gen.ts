@@ -28,6 +28,8 @@ import { Route as AppInsightAccountIdRouteImport } from './routes/_app.insight.$
 import { Route as AppChallengesHistoryRouteImport } from './routes/_app.challenges.history'
 import { Route as AppAdminChallengesRouteImport } from './routes/_app.admin.challenges'
 import { Route as AppAccountsAccountIdRouteImport } from './routes/_app.accounts.$accountId'
+import { Route as AppAdminMastersIndexRouteImport } from './routes/_app.admin.masters.index'
+import { Route as AppAdminMastersAccountIdRouteImport } from './routes/_app.admin.masters.$accountId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -123,6 +125,17 @@ const AppAccountsAccountIdRoute = AppAccountsAccountIdRouteImport.update({
   path: '/accounts/$accountId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminMastersIndexRoute = AppAdminMastersIndexRouteImport.update({
+  id: '/admin/masters/',
+  path: '/admin/masters/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminMastersAccountIdRoute =
+  AppAdminMastersAccountIdRouteImport.update({
+    id: '/admin/masters/$accountId',
+    path: '/admin/masters/$accountId',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -143,6 +156,8 @@ export interface FileRoutesByFullPath {
   '/payments/$reference': typeof AppPaymentsReferenceRoute
   '/admin/': typeof AppAdminIndexRoute
   '/challenges/': typeof AppChallengesIndexRoute
+  '/admin/masters/$accountId': typeof AppAdminMastersAccountIdRoute
+  '/admin/masters/': typeof AppAdminMastersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -162,6 +177,8 @@ export interface FileRoutesByTo {
   '/payments/$reference': typeof AppPaymentsReferenceRoute
   '/admin': typeof AppAdminIndexRoute
   '/challenges': typeof AppChallengesIndexRoute
+  '/admin/masters/$accountId': typeof AppAdminMastersAccountIdRoute
+  '/admin/masters': typeof AppAdminMastersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -184,6 +201,8 @@ export interface FileRoutesById {
   '/_app/payments/$reference': typeof AppPaymentsReferenceRoute
   '/_app/admin/': typeof AppAdminIndexRoute
   '/_app/challenges/': typeof AppChallengesIndexRoute
+  '/_app/admin/masters/$accountId': typeof AppAdminMastersAccountIdRoute
+  '/_app/admin/masters/': typeof AppAdminMastersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -206,6 +225,8 @@ export interface FileRouteTypes {
     | '/payments/$reference'
     | '/admin/'
     | '/challenges/'
+    | '/admin/masters/$accountId'
+    | '/admin/masters/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -225,6 +246,8 @@ export interface FileRouteTypes {
     | '/payments/$reference'
     | '/admin'
     | '/challenges'
+    | '/admin/masters/$accountId'
+    | '/admin/masters'
   id:
     | '__root__'
     | '/'
@@ -246,6 +269,8 @@ export interface FileRouteTypes {
     | '/_app/payments/$reference'
     | '/_app/admin/'
     | '/_app/challenges/'
+    | '/_app/admin/masters/$accountId'
+    | '/_app/admin/masters/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -389,6 +414,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAccountsAccountIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/masters/': {
+      id: '/_app/admin/masters/'
+      path: '/admin/masters'
+      fullPath: '/admin/masters/'
+      preLoaderRoute: typeof AppAdminMastersIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/masters/$accountId': {
+      id: '/_app/admin/masters/$accountId'
+      path: '/admin/masters/$accountId'
+      fullPath: '/admin/masters/$accountId'
+      preLoaderRoute: typeof AppAdminMastersAccountIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -421,6 +460,8 @@ interface AppRouteChildren {
   AppInsightAccountIdRoute: typeof AppInsightAccountIdRoute
   AppPaymentsReferenceRoute: typeof AppPaymentsReferenceRoute
   AppAdminIndexRoute: typeof AppAdminIndexRoute
+  AppAdminMastersAccountIdRoute: typeof AppAdminMastersAccountIdRoute
+  AppAdminMastersIndexRoute: typeof AppAdminMastersIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -438,6 +479,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppInsightAccountIdRoute: AppInsightAccountIdRoute,
   AppPaymentsReferenceRoute: AppPaymentsReferenceRoute,
   AppAdminIndexRoute: AppAdminIndexRoute,
+  AppAdminMastersAccountIdRoute: AppAdminMastersAccountIdRoute,
+  AppAdminMastersIndexRoute: AppAdminMastersIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
