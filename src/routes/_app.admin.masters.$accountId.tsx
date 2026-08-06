@@ -12,7 +12,7 @@ import { AdminGate } from "@/components/AdminGate";
 import { ErrorState, PatientLoader } from "@/components/DataState";
 import { NumericValue } from "@/components/NumericValue";
 import { TradesTable } from "@/components/TradesTable";
-import { PublicToggle, VisibilityBadge } from "@/routes/_app.admin.masters.index";
+import { PublicToggle, VisibilityBadge } from "@/components/admin/MasterVisibility";
 
 export const Route = createFileRoute("/_app/admin/masters/$accountId")({
   head: () => ({
