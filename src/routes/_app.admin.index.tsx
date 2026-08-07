@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Area,
   AreaChart,
@@ -8,27 +9,32 @@ import {
   CartesianGrid,
   Legend,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { Activity, Banknote, Award, ShieldAlert, TrendingUp, Users } from "lucide-react";
+import { toast } from "sonner";
 import {
-  Activity,
-  Banknote,
-  Award,
-  ShieldAlert,
-  TrendingUp,
-  Users,
-} from "lucide-react";
+  approveAdminPayout,
+  rejectAdminPayout,
+  type AdminPayout,
+  type AdminUserRow,
+} from "@/lib/api";
 import {
-  WEEKDAYS,
-  adminMock,
-  currency,
-  useAdminMock,
-  type AdminUser,
-} from "@/lib/admin-mock";
-import { PlaceholderBanner } from "@/components/PlaceholderBanner";
+  adminGrowthQueryOptions,
+  adminPayoutsQueryOptions,
+  adminRevenueQueryOptions,
+  adminSummaryQueryOptions,
+  adminSymbolExposureQueryOptions,
+  adminTopMastersQueryOptions,
+  adminUsersQueryOptions,
+} from "@/lib/queries";
 import { AdminGate } from "@/components/AdminGate";
+import { ErrorState, PatientLoader } from "@/components/DataState";
+import { Modal } from "@/components/Modal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { currency } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/admin/")({
   head: () => ({
@@ -60,33 +66,49 @@ function AdminDashboard() {
 }
 
 function AdminDashboardContent() {
-  const s = useAdminMock();
+  const qc = useQueryClient();
+  const { data: summary, isLoading: summaryLoading, error: summaryError, refetch: refetchSummary } = useQuery(adminSummaryQueryOptions());
+  const { data: revenue = [] } = useQuery(adminRevenueQueryOptions());
+  const { data: growth = [] } = useQuery(adminGrowthQueryOptions());
+  const { data: symbolExposure = [] } = useQuery(adminSymbolExposureQueryOptions());
+  const { data: payouts = [] } = useQuery(adminPayoutsQueryOptions());
+  const { data: topMasters = [] } = useQuery(adminTopMastersQueryOptions());
+  const { data: users = [] } = useQuery(adminUsersQueryOptions());
 
-  const totals = useMemo(() => {
-    const last = s.revenue[s.revenue.length - 1];
-    const prev = s.revenue[s.revenue.length - 2];
-    const mrr = last.infra + last.slots + last.profitShare;
-    const prevMrr = prev.infra + prev.slots + prev.profitShare;
-    const g = s.growth[s.growth.length - 1];
-    return {
-      mrr,
-      mrrDelta: ((mrr - prevMrr) / prevMrr) * 100,
-      annualised: mrr * 12,
-      masters: g.masters,
-      followers: g.followers,
-      pendingPayouts: s.payouts.filter((p) => p.status === "pending"),
-      atRisk: s.users.filter((u) => u.status === "debt" || u.status === "grace").length,
-      totalTrades: s.heatmap.flat().reduce((a, b) => a + b, 0),
-    };
-  }, [s]);
+  const totals = useMemo(() => ({
+    mrr: summary?.mrr ?? 0,
+    mrrDelta: summary?.mrr_change_pct ?? 0,
+    annualised: (summary?.mrr ?? 0) * 12,
+    masters: summary?.masters_count ?? 0,
+    followers: summary?.followers_count ?? 0,
+    pendingAmount: summary?.payouts_pending_amount ?? 0,
+    pendingCount: summary?.payouts_pending_count ?? 0,
+    atRisk: summary?.at_risk_wallets_count ?? 0,
+  }), [summary]);
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["admin"] });
+
+  if (summaryLoading && !summary) {
+    return (
+      <div className="mx-auto max-w-6xl p-4 md:p-8">
+        <PatientLoader label="Loading admin analytics…" />
+      </div>
+    );
+  }
+
+  if (summaryError && !summary) {
+    return (
+      <div className="mx-auto max-w-6xl p-4 md:p-8">
+        <ErrorState message={(summaryError as Error).message} onRetry={() => refetchSummary()} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 p-4 md:p-8">
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Platform
-          </div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Platform</div>
           <h1 className="mt-1 truncate font-mono text-lg font-bold tracking-widest md:text-xl">
             ADMIN CONSOLE
           </h1>
@@ -107,9 +129,6 @@ function AdminDashboardContent() {
         </div>
       </header>
 
-
-      <PlaceholderBanner text="Mock analytics — nothing here is wired to live platform data yet." />
-
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
           icon={TrendingUp}
@@ -127,15 +146,15 @@ function AdminDashboardContent() {
         <Kpi
           icon={Banknote}
           label="Payouts pending"
-          value={currency(totals.pendingPayouts.reduce((a, p) => a + p.amount, 0))}
-          sub={`${totals.pendingPayouts.length} request(s)`}
-          accent={totals.pendingPayouts.length ? "warning" : undefined}
+          value={currency(totals.pendingAmount)}
+          sub={`${totals.pendingCount} request(s)`}
+          accent={totals.pendingCount ? "warning" : undefined}
         />
         <Kpi
           icon={ShieldAlert}
           label="At-risk wallets"
           value={String(totals.atRisk)}
-          sub="In debt or grace"
+          sub="Live risk signals"
           accent={totals.atRisk ? "loss" : undefined}
         />
       </section>
@@ -143,7 +162,7 @@ function AdminDashboardContent() {
       <Panel title="Revenue by stream" hint={`Annualised run-rate ${currency(totals.annualised)}`}>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={s.revenue} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+            <AreaChart data={revenue} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
               <defs>
                 <linearGradient id="gInfra" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.5} />
@@ -161,7 +180,7 @@ function AdminDashboardContent() {
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
               <YAxis tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
-              <Tooltip
+              <RechartsTooltip
                 contentStyle={{
                   background: "var(--card)",
                   border: "1px solid var(--border)",
@@ -188,7 +207,7 @@ function AdminDashboardContent() {
               />
               <Area
                 type="monotone"
-                dataKey="profitShare"
+                dataKey="profit_share"
                 name="Profit share"
                 stroke="var(--warning)"
                 fill="url(#gPs)"
@@ -203,11 +222,11 @@ function AdminDashboardContent() {
         <Panel title="Account growth">
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={s.growth} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+              <BarChart data={growth} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
                 <YAxis tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
-                <Tooltip
+                <RechartsTooltip
                   contentStyle={{
                     background: "var(--card)",
                     border: "1px solid var(--border)",
@@ -228,11 +247,11 @@ function AdminDashboardContent() {
           </div>
         </Panel>
 
-        <Panel title="Traded symbols" hint="Volume across the platform">
+        <Panel title="Current symbol exposure" hint="Live open positions, platform-wide">
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={s.symbols}
+                data={symbolExposure}
                 layout="vertical"
                 margin={{ top: 4, right: 8, left: 12, bottom: 0 }}
               >
@@ -245,7 +264,7 @@ function AdminDashboardContent() {
                   tick={{ fontSize: 10 }}
                   stroke="var(--muted-foreground)"
                 />
-                <Tooltip
+                <RechartsTooltip
                   contentStyle={{
                     background: "var(--card)",
                     border: "1px solid var(--border)",
@@ -253,21 +272,14 @@ function AdminDashboardContent() {
                     fontSize: 11,
                   }}
                 />
-                <Bar dataKey="volume" name="Lots" fill="var(--primary)" radius={[0, 2, 2, 0]} />
+                <Bar dataKey="lots" name="Lots" fill="var(--primary)" radius={[0, 2, 2, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Panel>
       </div>
 
-      <Panel
-        title="Execution heatmap"
-        hint={`${totals.totalTrades.toLocaleString()} fills · weekday × hour (UTC)`}
-      >
-        <Heatmap grid={s.heatmap} />
-      </Panel>
-
-      <PayoutQueue />
+      <PayoutQueue payouts={payouts} invalidate={invalidate} />
 
       <Panel title="Top masters by platform revenue">
         <div className="overflow-x-auto">
@@ -277,36 +289,41 @@ function AdminDashboardContent() {
                 <th className="px-2 py-2 text-left">Master</th>
                 <th className="px-2 py-2 text-right">Followers</th>
                 <th className="px-2 py-2 text-right">Rate</th>
-                <th className="px-2 py-2 text-right">Net P&amp;L</th>
-                <th className="px-2 py-2 text-right">Max DD</th>
+                <th className="px-2 py-2 text-right">Billed P&amp;L</th>
                 <th className="px-2 py-2 text-right">Revenue</th>
               </tr>
             </thead>
             <tbody>
-              {s.topMasters.map((m) => (
-                <tr key={m.accountId} className="border-b border-border last:border-0">
+              {topMasters.map((m) => (
+                <tr key={m.account_id} className="border-b border-border last:border-0">
                   <td className="px-2 py-2">
                     <div className="font-medium">{m.name}</div>
-                    <div className="font-mono text-[10px] text-muted-foreground">{m.accountId}</div>
+                    <div className="font-mono text-[10px] text-muted-foreground">{m.account_id}</div>
                   </td>
                   <td className="px-2 py-2 text-right font-mono">{m.followers}</td>
-                  <td className="px-2 py-2 text-right font-mono">{m.ratePct}%</td>
-                  <td
-                    className={`px-2 py-2 text-right font-mono ${m.netPnl >= 0 ? "text-profit" : "text-loss"}`}
-                  >
-                    {currency(m.netPnl)}
+                  <td className="px-2 py-2 text-right font-mono">{m.rate_percent === null ? "—" : `${m.rate_percent}%`}</td>
+                  <td className={`px-2 py-2 text-right font-mono ${m.billed_pnl >= 0 ? "text-profit" : "text-loss"}`}>
+                    {currency(m.billed_pnl)}
                   </td>
-                  <td className="px-2 py-2 text-right font-mono text-loss">{m.drawdownPct}%</td>
                   <td className="px-2 py-2 text-right font-mono">{currency(m.revenue)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-help">Realized profit on already profit-share-billed trades only — does not include unbilled losses.</span>
+              </TooltipTrigger>
+              <TooltipContent>Accounts only post billed P&amp;L once profit-share has been settled.</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </Panel>
 
-      <UserManagement />
-
+      <UserManagement users={users} />
     </div>
   );
 }
@@ -353,7 +370,7 @@ function Panel({
 }: {
   title: string;
   hint?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="rounded-lg border border-border bg-card p-4">
@@ -368,98 +385,130 @@ function Panel({
   );
 }
 
-function Heatmap({ grid }: { grid: number[][] }) {
-  const max = Math.max(...grid.flat(), 1);
-  return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[620px]">
-        <div className="grid grid-cols-[2.5rem_repeat(24,minmax(0,1fr))] gap-0.5">
-          <div />
-          {Array.from({ length: 24 }, (_, h) => (
-            <div key={h} className="text-center font-mono text-[8px] text-muted-foreground">
-              {h % 3 === 0 ? h : ""}
-            </div>
-          ))}
-          {grid.map((row, d) => (
-            <div key={d} className="contents">
-              <div className="pr-1 text-right font-mono text-[9px] leading-5 text-muted-foreground">
-                {WEEKDAYS[d]}
-              </div>
-              {row.map((v, h) => (
-                <div
-                  key={h}
-                  title={`${WEEKDAYS[d]} ${h}:00 — ${v} fills`}
-                  className="h-5 rounded-[2px]"
-                  style={{
-                    backgroundColor: `color-mix(in oklab, var(--primary) ${Math.round((v / max) * 100)}%, var(--muted))`,
-                  }}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+function PayoutQueue({
+  payouts,
+  invalidate,
+}: {
+  payouts: AdminPayout[];
+  invalidate: () => void;
+}) {
+  const qc = useQueryClient();
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
-function PayoutQueue() {
-  const { payouts } = useAdminMock();
+  const approve = useMutation({
+    mutationFn: (id: string) => approveAdminPayout(id),
+    onSuccess: () => {
+      toast.success("Payout approved.");
+      qc.invalidateQueries({ queryKey: ["admin"] });
+      invalidate();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const reject = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => rejectAdminPayout(id, reason),
+    onSuccess: () => {
+      toast.success("Payout rejected.");
+      setRejectOpen(false);
+      setRejectReason("");
+      setActiveId(null);
+      qc.invalidateQueries({ queryKey: ["admin"] });
+      invalidate();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   return (
     <Panel title="Payout requests" hint="Master withdrawals awaiting review">
       <div className="space-y-2">
         {payouts.map((p) => (
           <div
             key={p.id}
-            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border border-border bg-background/60 p-3"
+            className="rounded-md border border-border bg-background/60 p-3"
           >
-            <div className="min-w-0">
-              <div className="truncate text-xs font-medium">{p.masterName}</div>
-              <div className="truncate font-mono text-[10px] text-muted-foreground">
-                {p.masterId} · {p.requestedAt}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate text-xs font-medium">
+                  {p.master_profiles?.display_name || "Unnamed master"}
+                </div>
+                <div className="truncate font-mono text-[10px] text-muted-foreground">
+                  {p.master_account_id} · {p.period_end}
+                </div>
+                <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+                  <span>Recipient: {p.recipient_name || "—"}</span>
+                  <span>{p.recipient_phone || "—"}</span>
+                </div>
               </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <span className="font-mono text-sm text-profit">{currency(p.amount)}</span>
-              {p.status === "pending" ? (
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <span className="font-mono text-sm text-profit">{currency(p.amount)}</span>
                 <button
-                  onClick={() => adminMock.resolvePayout(p.id, "paid")}
-                  className="rounded border border-profit/40 px-2.5 py-1.5 text-[11px] text-profit"
+                  disabled={approve.isPending}
+                  onClick={() => approve.mutate(p.id)}
+                  className="rounded border border-profit/40 px-2.5 py-1.5 text-[11px] text-profit disabled:opacity-40"
                 >
-                  Mark paid
+                  Approve
                 </button>
-              ) : (
-                <span className="rounded border border-profit/40 bg-profit/10 px-2 py-0.5 font-mono text-[10px] uppercase text-profit">
-                  {p.status}
-                </span>
-              )}
+                <button
+                  disabled={reject.isPending}
+                  onClick={() => {
+                    setActiveId(p.id);
+                    setRejectReason("");
+                    setRejectOpen(true);
+                  }}
+                  className="rounded border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground disabled:opacity-40"
+                >
+                  Reject
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
+
+      <Modal open={rejectOpen} onClose={() => setRejectOpen(false)} title="Reject payout">
+        <p className="text-xs text-muted-foreground">Add a short reason so the master knows why the request was declined.</p>
+        <label className="mt-3 block">
+          <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Reason</span>
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={3}
+            className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+        </label>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={() => setRejectOpen(false)}
+            className="rounded border border-border px-3 py-1.5 text-xs text-muted-foreground"
+          >
+            Cancel
+          </button>
+          <button
+            disabled={!rejectReason.trim() || !activeId || reject.isPending}
+            onClick={() => {
+              if (!activeId) return;
+              reject.mutate({ id: activeId, reason: rejectReason.trim() });
+            }}
+            className="rounded bg-loss px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+          >
+            Reject payout
+          </button>
+        </div>
+      </Modal>
     </Panel>
   );
 }
 
-const STATUS_STYLES: Record<AdminUser["status"], string> = {
-  live: "border-profit/40 bg-profit/10 text-profit",
-  paused: "border-border bg-muted/40 text-muted-foreground",
-  grace: "border-warning/40 bg-warning/10 text-warning",
-  debt: "border-loss/40 bg-loss/10 text-loss",
-  closed: "border-border bg-muted/40 text-muted-foreground",
-};
-
-function UserManagement() {
-  const { users } = useAdminMock();
+function UserManagement({ users }: { users: AdminUserRow[] }) {
   const [q, setQ] = useState("");
   const [role, setRole] = useState<"all" | "master" | "follower">("all");
 
   const filtered = users.filter(
     (u) =>
       (role === "all" || u.role === role) &&
-      (q === "" ||
-        u.email.toLowerCase().includes(q.toLowerCase()) ||
-        u.accountId.toLowerCase().includes(q.toLowerCase())),
+      (q === "" || u.account_id.toLowerCase().includes(q.toLowerCase())),
   );
 
   return (
@@ -468,7 +517,7 @@ function UserManagement() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search email or account id"
+          placeholder="Search account id"
           className="min-w-0 rounded-md border border-border bg-input px-3 py-2 text-xs outline-none focus:border-primary"
         />
         <div className="flex gap-1">
@@ -502,31 +551,25 @@ function UserManagement() {
           </thead>
           <tbody>
             {filtered.map((u) => (
-              <tr key={u.id} className="border-b border-border last:border-0">
+              <tr key={u.account_id} className="border-b border-border last:border-0">
                 <td className="px-2 py-2">
-                  <div className="truncate">{u.email}</div>
-                  <div className="truncate font-mono text-[10px] text-muted-foreground">
-                    {u.accountId}
-                  </div>
+                  <div className="truncate font-mono text-[10px] text-muted-foreground">{u.account_id}</div>
                 </td>
                 <td className="px-2 py-2 capitalize text-muted-foreground">{u.role}</td>
                 <td className="px-2 py-2">
-                  <span
-                    className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase ${STATUS_STYLES[u.status]}`}
-                  >
+                  <span className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase ${getStatusStyle(u.status)}`}>
                     {u.status}
                   </span>
                 </td>
-                <td className="px-2 py-2 text-right font-mono">{currency(u.lifetimeValue)}</td>
+                <td className="px-2 py-2 text-right font-mono">{currency(u.lifetime_value)}</td>
                 <td className="px-2 py-2 text-right font-mono text-muted-foreground">{u.joined}</td>
                 <td className="px-2 py-2 text-right">
                   <button
-                    onClick={() =>
-                      adminMock.setUserStatus(u.id, u.status === "closed" ? "live" : "closed")
-                    }
-                    className="rounded border border-border px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground"
+                    disabled
+                    title="Not available yet"
+                    className="rounded border border-border px-2.5 py-1 text-[11px] text-muted-foreground opacity-60"
                   >
-                    {u.status === "closed" ? "Restore" : "Suspend"}
+                    Suspend
                   </button>
                 </td>
               </tr>
@@ -536,4 +579,21 @@ function UserManagement() {
       </div>
     </Panel>
   );
+}
+
+function getStatusStyle(status: string): string {
+  switch (status) {
+    case "live":
+      return "border-profit/40 bg-profit/10 text-profit";
+    case "paused":
+      return "border-border bg-muted/40 text-muted-foreground";
+    case "grace":
+      return "border-warning/40 bg-warning/10 text-warning";
+    case "debt":
+      return "border-loss/40 bg-loss/10 text-loss";
+    case "closed":
+      return "border-border bg-muted/40 text-muted-foreground";
+    default:
+      return "border-border bg-muted/40 text-muted-foreground";
+  }
 }

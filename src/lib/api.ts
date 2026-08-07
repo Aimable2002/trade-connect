@@ -563,13 +563,90 @@ export const getPayment = (reference: string) =>
     timeoutMs: 15_000,
   });
 
-// -------- Admin: master listing control --------
+// -------- Admin: live analytics + master management --------
 //
 // These are admin-only routes: the backend independently re-verifies the
 // `app_metadata.is_admin` claim on the bearer token and returns 403 without
 // it, so the client-side <AdminGate> is UX, not the security boundary.
 // Deliberately kept separate from DirectoryMaster / MasterEarnings: the
 // public directory surface and the admin surface evolve independently.
+
+export interface AdminSummary {
+  mrr: number;
+  mrr_change_pct: number;
+  accounts_total: number;
+  masters_count: number;
+  followers_count: number;
+  payouts_pending_amount: number;
+  payouts_pending_count: number;
+  at_risk_wallets_count: number;
+}
+
+export const getAdminSummary = () =>
+  authedFetch<AdminSummary>("/admin/summary", { method: "GET", timeoutMs: 15_000 });
+
+export interface AdminRevenuePoint {
+  month: string;
+  infra: number;
+  slots: number;
+  profit_share: number;
+}
+
+export const getAdminRevenue = () =>
+  authedFetch<AdminRevenuePoint[]>("/admin/analytics/revenue", {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
+export interface AdminGrowthPoint {
+  month: string;
+  masters: number;
+  followers: number;
+}
+
+export const getAdminGrowth = () =>
+  authedFetch<AdminGrowthPoint[]>("/admin/analytics/growth", {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
+export interface AdminSymbolExposure {
+  symbol: string;
+  lots: number;
+  position_count: number;
+}
+
+export const getAdminSymbolExposure = () =>
+  authedFetch<AdminSymbolExposure[]>("/admin/analytics/symbol-exposure", {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
+export interface AdminTopMaster {
+  account_id: string;
+  name: string;
+  followers: number;
+  revenue: number;
+  rate_percent: number | null;
+  billed_pnl: number;
+}
+
+export const getAdminTopMasters = () =>
+  authedFetch<AdminTopMaster[]>("/admin/analytics/top-masters", {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
+export interface AdminUserRow {
+  account_id: string;
+  role: "master" | "follower";
+  status: string;
+  joined: string;
+  lifetime_value: number;
+}
+
+export const getAdminUsers = () =>
+  authedFetch<AdminUserRow[]>("/admin/users", { method: "GET", timeoutMs: 15_000 });
 
 export interface AdminMasterListItem {
   account_id: string;
@@ -616,15 +693,65 @@ export const getAdminMasters = () =>
     timeoutMs: 20_000,
   });
 
-export const getAdminMaster = (accountId: string) =>
+export const getAdminMasterDetail = (accountId: string) =>
   authedFetch<AdminMasterDetail>(`/admin/masters/${accountId}`, {
     method: "GET",
     timeoutMs: 30_000,
   });
 
+export const getAdminMaster = (accountId: string) => getAdminMasterDetail(accountId);
+
 export const setAdminMasterPublic = (accountId: string, is_public: boolean) =>
   authedFetch<AdminMasterVisibility>(`/admin/masters/${accountId}/public`, {
     method: "POST",
     body: { is_public },
+    timeoutMs: 15_000,
+  });
+
+export interface AdminPayout {
+  id: string;
+  master_account_id: string;
+  period_start: string;
+  period_end: string;
+  amount: number;
+  recipient_name: string;
+  recipient_phone: string;
+  status: "pending" | "paid" | "rejected";
+  paid_at: string | null;
+  rejection_reason: string | null;
+  master_profiles: { display_name: string } | null;
+}
+
+export const getAdminPendingPayouts = () =>
+  authedFetch<AdminPayout[]>("/admin/payouts", { method: "GET", timeoutMs: 15_000 });
+
+export const approveAdminPayout = (id: string) =>
+  authedFetch<AdminPayout>(`/admin/payouts/${id}/approve`, {
+    method: "POST",
+    timeoutMs: 15_000,
+  });
+
+export const rejectAdminPayout = (id: string, reason: string) =>
+  authedFetch<AdminPayout>(`/admin/payouts/${id}/reject`, {
+    method: "POST",
+    body: { reason },
+    timeoutMs: 15_000,
+  });
+
+export const getMasterPayouts = (accountId: string) =>
+  authedFetch<AdminPayout[]>(`/masters/${accountId}/payouts`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
+
+export const requestMasterPayout = (
+  accountId: string,
+  amount: number,
+  recipient_name: string,
+  recipient_phone: string,
+) =>
+  authedFetch<AdminPayout>(`/masters/${accountId}/payouts`, {
+    method: "POST",
+    body: { amount, recipient_name, recipient_phone },
     timeoutMs: 15_000,
   });

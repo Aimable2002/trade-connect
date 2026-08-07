@@ -35,6 +35,7 @@ import {
   accountsQueryOptions,
   billingQueryOptions,
   masterEarningsQueryOptions,
+  masterPayoutsQueryOptions,
   masterProfileQueryOptions,
   mastersDirectoryQueryOptions,
   rosterQueryOptions,
@@ -46,15 +47,18 @@ import {
   closeAccount,
   pauseAccount,
   reactivateBilling,
+  requestMasterPayout,
   resumeAccount,
   switchMaster,
   upsertMasterProfile,
+  type AdminPayout,
 } from "@/lib/api";
 import { NumericValue } from "@/components/NumericValue";
 import { RoleBadge } from "@/components/RoleBadge";
 import { StatusPill } from "@/components/StatusPill";
 import { Modal } from "@/components/Modal";
 import { PatientLoader, ErrorState } from "@/components/DataState";
+import { currency } from "@/lib/utils";
 import {
   bySymbol,
   equityCurve,
@@ -646,12 +650,43 @@ function MasterEarningsPanel({ accountId }: { accountId: string }) {
 const PAYOUT_MINIMUM = 50;
 
 function MasterPayoutCard({ accountId }: { accountId: string }) {
-  const { data, isLoading } = useQuery(masterEarningsQueryOptions(accountId));
+  const qc = useQueryClient();
+  const { data: earnings, isLoading: earningsLoading } = useQuery(masterEarningsQueryOptions(accountId));
+  const { data: payouts = [], isLoading: payoutsLoading } = useQuery(masterPayoutsQueryOptions(accountId));
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
 
-  const available = data?.total_earned ?? 0;
+  const lockedAmount = (payouts ?? []).reduce((sum, payout) => {
+    if (payout.status === "pending" || payout.status === "paid") return sum + payout.amount;
+    return sum;
+  }, 0);
+  const available = Math.max((earnings?.total_earned ?? 0) - lockedAmount, 0);
   const canRequest = available >= PAYOUT_MINIMUM;
+
+  const submit = useMutation({
+    mutationFn: () => {
+      const parsed = Number(amount);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        throw new Error("Enter a valid payout amount.");
+      }
+      if (!recipientName.trim() || !recipientPhone.trim()) {
+        throw new Error("Recipient name and phone are required.");
+      }
+      return requestMasterPayout(accountId, parsed, recipientName.trim(), recipientPhone.trim());
+    },
+    onSuccess: () => {
+      toast.success("Payout request submitted.");
+      setOpen(false);
+      setAmount("");
+      setRecipientName("");
+      setRecipientPhone("");
+      qc.invalidateQueries({ queryKey: ["masters", accountId, "earnings"] });
+      qc.invalidateQueries({ queryKey: ["masters", accountId, "payouts"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
@@ -662,10 +697,10 @@ function MasterPayoutCard({ accountId }: { accountId: string }) {
       <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <div className="min-w-0">
           <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
-            Earned balance
+            Available to withdraw
           </div>
           <div className="mt-1 text-3xl font-semibold">
-            {isLoading ? (
+            {earningsLoading ? (
               <span className="text-muted-foreground/60">…</span>
             ) : (
               <NumericValue value={available} format="currency" flash={false} />
@@ -679,6 +714,8 @@ function MasterPayoutCard({ accountId }: { accountId: string }) {
         <button
           onClick={() => {
             setAmount(available.toFixed(2));
+            setRecipientName("");
+            setRecipientPhone("");
             setOpen(true);
           }}
           disabled={!canRequest}
@@ -688,13 +725,37 @@ function MasterPayoutCard({ accountId }: { accountId: string }) {
         </button>
       </div>
 
-      {!isLoading && !canRequest && (
+      {!earningsLoading && !canRequest && (
         <div className="mt-3 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
           You need at least{" "}
-          <NumericValue value={PAYOUT_MINIMUM} format="currency" flash={false} /> in earnings before
-          a payout can be requested.
+          <NumericValue value={PAYOUT_MINIMUM} format="currency" flash={false} /> in available
+          earnings before a payout can be requested.
         </div>
       )}
+
+      <div className="mt-4 space-y-2">
+        {(payoutsLoading ? [] : payouts).map((payout) => (
+          <div key={payout.id} className="rounded-md border border-border bg-background/60 p-3 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-mono text-[11px] text-muted-foreground">
+                {payout.period_end}
+              </div>
+              <span className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase ${getPayoutBadgeClass(payout.status)}`}>
+                {payout.status}
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <span className="font-mono text-[11px] text-muted-foreground">
+                {payout.recipient_name || "—"}
+              </span>
+              <span className="font-mono text-sm text-profit">{currency(payout.amount)}</span>
+            </div>
+            {payout.status === "rejected" && payout.rejection_reason && (
+              <div className="mt-2 text-[11px] text-loss">{payout.rejection_reason}</div>
+            )}
+          </div>
+        ))}
+      </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Request a payout">
         <p className="text-xs text-muted-foreground">
@@ -710,6 +771,22 @@ function MasterPayoutCard({ accountId }: { accountId: string }) {
             className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 font-mono text-sm outline-none focus:border-primary"
           />
         </label>
+        <label className="mt-3 block">
+          <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Recipient name</span>
+          <input
+            value={recipientName}
+            onChange={(e) => setRecipientName(e.target.value)}
+            className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+        </label>
+        <label className="mt-3 block">
+          <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Recipient phone</span>
+          <input
+            value={recipientPhone}
+            onChange={(e) => setRecipientPhone(e.target.value)}
+            className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+        </label>
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={() => setOpen(false)}
@@ -718,18 +795,29 @@ function MasterPayoutCard({ accountId }: { accountId: string }) {
             Cancel
           </button>
           <button
-            onClick={() => {
-              setOpen(false);
-              toast.info("Payout requests aren't live yet — this is a preview of the flow.");
-            }}
-            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+            disabled={submit.isPending || !amount || !recipientName.trim() || !recipientPhone.trim()}
+            onClick={() => submit.mutate()}
+            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
           >
-            Submit request
+            {submit.isPending ? "Submitting…" : "Submit request"}
           </button>
         </div>
       </Modal>
     </section>
   );
+}
+
+function getPayoutBadgeClass(status: AdminPayout["status"]): string {
+  switch (status) {
+    case "pending":
+      return "border-warning/40 bg-warning/10 text-warning";
+    case "paid":
+      return "border-profit/40 bg-profit/10 text-profit";
+    case "rejected":
+      return "border-loss/40 bg-loss/10 text-loss";
+    default:
+      return "border-border bg-muted/40 text-muted-foreground";
+  }
 }
 
 /* ---------------- follower ---------------- */

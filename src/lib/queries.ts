@@ -8,14 +8,21 @@ import {
 } from "./supabase";
 import {
   getAccountTrades,
-  getAdminMaster,
+  getAdminGrowth,
+  getAdminMasterDetail,
   getAdminMasters,
+  getAdminPendingPayouts,
+  getAdminRevenue,
+  getAdminSummary,
+  getAdminSymbolExposure,
+  getAdminTopMasters,
+  getAdminUsers,
   getChallengeHistory,
-
   getChallengeStatus,
   getChallenges,
   getBilling,
   getMasterEarnings,
+  getMasterPayouts,
   getMasterProfile,
   getMasterRate,
   getMasterTrades,
@@ -24,10 +31,16 @@ import {
   getWallet,
   getWalletTransactions,
   ApiError,
+  type AdminGrowthPoint,
   type AdminMasterDetail,
   type AdminMasterListItem,
+  type AdminPayout,
+  type AdminRevenuePoint,
+  type AdminSummary,
+  type AdminSymbolExposure,
+  type AdminTopMaster,
+  type AdminUserRow,
   type Billing,
-
   type Challenge,
   type ChallengeHistoryResponse,
   type ChallengeStatusResponse,
@@ -231,6 +244,55 @@ export const challengeHistoryQueryOptions = (accountId: string | undefined) =>
 
 // -------- Admin: master listings --------
 
+export const adminSummaryQueryOptions = () =>
+  queryOptions({
+    queryKey: ["admin", "summary"],
+    queryFn: (): Promise<AdminSummary> => getAdminSummary(),
+    staleTime: 15_000,
+  });
+
+export const adminRevenueQueryOptions = () =>
+  queryOptions({
+    queryKey: ["admin", "analytics", "revenue"],
+    queryFn: (): Promise<AdminRevenuePoint[]> => getAdminRevenue(),
+    staleTime: 15_000,
+  });
+
+export const adminGrowthQueryOptions = () =>
+  queryOptions({
+    queryKey: ["admin", "analytics", "growth"],
+    queryFn: (): Promise<AdminGrowthPoint[]> => getAdminGrowth(),
+    staleTime: 15_000,
+  });
+
+export const adminSymbolExposureQueryOptions = () =>
+  queryOptions({
+    queryKey: ["admin", "analytics", "symbol-exposure"],
+    queryFn: (): Promise<AdminSymbolExposure[]> => getAdminSymbolExposure(),
+    staleTime: 15_000,
+  });
+
+export const adminTopMastersQueryOptions = () =>
+  queryOptions({
+    queryKey: ["admin", "analytics", "top-masters"],
+    queryFn: (): Promise<AdminTopMaster[]> => getAdminTopMasters(),
+    staleTime: 15_000,
+  });
+
+export const adminUsersQueryOptions = () =>
+  queryOptions({
+    queryKey: ["admin", "users"],
+    queryFn: (): Promise<AdminUserRow[]> => getAdminUsers(),
+    staleTime: 15_000,
+  });
+
+export const adminPayoutsQueryOptions = () =>
+  queryOptions({
+    queryKey: ["admin", "payouts"],
+    queryFn: (): Promise<AdminPayout[]> => getAdminPendingPayouts(),
+    staleTime: 15_000,
+  });
+
 export const adminMastersQueryOptions = () =>
   queryOptions({
     queryKey: ["admin", "masters"],
@@ -242,7 +304,15 @@ export const adminMasterQueryOptions = (accountId: string | undefined) =>
   queryOptions({
     queryKey: ["admin", "masters", accountId],
     enabled: !!accountId,
-    queryFn: (): Promise<AdminMasterDetail> => getAdminMaster(accountId as string),
+    queryFn: (): Promise<AdminMasterDetail> => getAdminMasterDetail(accountId as string),
     staleTime: 15_000,
     retry: false,
+  });
+
+export const masterPayoutsQueryOptions = (accountId: string | undefined) =>
+  queryOptions({
+    queryKey: ["masters", accountId, "payouts"],
+    enabled: !!accountId,
+    queryFn: (): Promise<AdminPayout[]> => getMasterPayouts(accountId as string),
+    staleTime: 15_000,
   });
