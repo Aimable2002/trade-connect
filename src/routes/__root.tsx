@@ -21,12 +21,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold text-foreground">
-          Something failed to load
-        </h1>
-        <p className="mt-2 font-mono text-xs text-muted-foreground">
-          {error.message}
-        </p>
+        <h1 className="text-xl font-semibold text-foreground">Something failed to load</h1>
+        <p className="mt-2 font-mono text-xs text-muted-foreground">{error.message}</p>
         <div className="mt-6 flex justify-center gap-2">
           <button
             onClick={() => {
@@ -60,17 +56,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#0b0f1a" },
-      { title: "CopyDesk — MT5 Copy Trading Terminal" },
+      { title: "CopyDesk — Copy Trading Terminal" },
       {
         name: "description",
         content:
-          "Copy live MetaTrader 5 trades from vetted masters to your own broker account in real time.",
+          "Copy live trades from vetted masters — MT5 or cTrader — straight into your own MT5 broker account in real time.",
       },
-      { property: "og:title", content: "CopyDesk — MT5 Copy Trading Terminal" },
+      { property: "og:title", content: "CopyDesk — Copy Trading Terminal" },
       {
         property: "og:description",
         content:
-          "Copy live MetaTrader 5 trades from vetted masters to your own broker account in real time.",
+          "Copy live trades from vetted masters — MT5 or cTrader — straight into your own MT5 broker account in real time.",
       },
       { property: "og:type", content: "website" },
       { property: "og:image", content: "/android-chrome-512x512.png" },
@@ -129,11 +125,7 @@ function RootComponent() {
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (
-        event === "SIGNED_IN" ||
-        event === "SIGNED_OUT" ||
-        event === "USER_UPDATED"
-      ) {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
         router.invalidate();
         if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
       }

@@ -131,7 +131,11 @@ function AccountDetails() {
         </div>
       </header>
 
-      <LifecycleControls accountId={accountId} status={account.status} />
+      <LifecycleControls
+        accountId={accountId}
+        status={account.status}
+        platform={account.platform}
+      />
 
       {account.role === "master" ? (
         <MasterSections accountId={accountId} />
@@ -146,7 +150,15 @@ function AccountDetails() {
 
 /* ---------------- lifecycle ---------------- */
 
-function LifecycleControls({ accountId, status }: { accountId: string; status: string }) {
+function LifecycleControls({
+  accountId,
+  status,
+  platform,
+}: {
+  accountId: string;
+  status: string;
+  platform?: "mt5" | "ctrader";
+}) {
   const qc = useQueryClient();
   const [pauseOpen, setPauseOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -233,7 +245,9 @@ function LifecycleControls({ accountId, status }: { accountId: string; status: s
 
       <Modal open={closeOpen} onClose={() => setCloseOpen(false)} title="Close account?">
         <p className="text-xs text-muted-foreground">
-          This tears down the MT5 instance. You'll need to re-provision to use this account again.
+          {platform === "ctrader"
+            ? "This revokes CopyDesk's read access to your cTrader account and stops relaying its trades. You'll need to reconnect via cTrader to use this account again."
+            : "This tears down the MT5 instance. You'll need to re-provision to use this account again."}
         </p>
         <div className="mt-4 flex justify-end gap-2">
           <button
@@ -289,7 +303,7 @@ function MasterPerformancePanel({ accountId }: { accountId: string }) {
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Performance</div>
-      {isLoading && <PatientLoader label="Pulling deals from MT5…" compact className="mt-2" />}
+      {isLoading && <PatientLoader label="Pulling your trade history…" compact className="mt-2" />}
       {error && (
         <ErrorState className="mt-2" message={(error as Error).message} onRetry={() => refetch()} />
       )}
@@ -553,9 +567,7 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
             still round-tripped through `isPublic` above. */}
         <div
           className={`flex items-start gap-2.5 rounded-md border p-3 ${
-            isPublic
-              ? "border-profit/30 bg-profit/5"
-              : "border-warning/30 bg-warning/5"
+            isPublic ? "border-profit/30 bg-profit/5" : "border-warning/30 bg-warning/5"
           }`}
         >
           {isPublic ? (
@@ -564,14 +576,12 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
             <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
           )}
           <div className="min-w-0">
-            <div
-              className={`text-xs font-semibold ${isPublic ? "text-profit" : "text-warning"}`}
-            >
+            <div className={`text-xs font-semibold ${isPublic ? "text-profit" : "text-warning"}`}>
               {isPublic ? "Listed in the public directory" : "Not listed yet"}
             </div>
             <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
               {isPublic
-                ? "Followers can find this profile in the directory and leaderboard. Your live stats are computed from your real MT5 deals."
+                ? "Followers can find this profile in the directory and leaderboard. Your live stats are computed from your real trade history."
                 : "Listing is granted by CopyDesk once you pass Challenge 1 and your track record is verified — it isn't a switch you flip yourself. Keep your profile up to date in the meantime."}
             </p>
           </div>
@@ -587,7 +597,6 @@ function MasterProfileEditor({ accountId }: { accountId: string }) {
     </section>
   );
 }
-
 
 function MasterEarningsPanel({ accountId }: { accountId: string }) {
   const { data, isLoading, error } = useQuery(masterEarningsQueryOptions(accountId));
@@ -651,8 +660,12 @@ const PAYOUT_MINIMUM = 50;
 
 function MasterPayoutCard({ accountId }: { accountId: string }) {
   const qc = useQueryClient();
-  const { data: earnings, isLoading: earningsLoading } = useQuery(masterEarningsQueryOptions(accountId));
-  const { data: payouts = [], isLoading: payoutsLoading } = useQuery(masterPayoutsQueryOptions(accountId));
+  const { data: earnings, isLoading: earningsLoading } = useQuery(
+    masterEarningsQueryOptions(accountId),
+  );
+  const { data: payouts = [], isLoading: payoutsLoading } = useQuery(
+    masterPayoutsQueryOptions(accountId),
+  );
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [recipientName, setRecipientName] = useState("");
@@ -707,8 +720,7 @@ function MasterPayoutCard({ accountId }: { accountId: string }) {
             )}
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Profit share credited from your followers. Minimum payout $
-            {PAYOUT_MINIMUM}.
+            Profit share credited from your followers. Minimum payout ${PAYOUT_MINIMUM}.
           </p>
         </div>
         <button
@@ -727,20 +739,22 @@ function MasterPayoutCard({ accountId }: { accountId: string }) {
 
       {!earningsLoading && !canRequest && (
         <div className="mt-3 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
-          You need at least{" "}
-          <NumericValue value={PAYOUT_MINIMUM} format="currency" flash={false} /> in available
-          earnings before a payout can be requested.
+          You need at least <NumericValue value={PAYOUT_MINIMUM} format="currency" flash={false} />{" "}
+          in available earnings before a payout can be requested.
         </div>
       )}
 
       <div className="mt-4 space-y-2">
         {(payoutsLoading ? [] : payouts).map((payout) => (
-          <div key={payout.id} className="rounded-md border border-border bg-background/60 p-3 text-xs">
+          <div
+            key={payout.id}
+            className="rounded-md border border-border bg-background/60 p-3 text-xs"
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="font-mono text-[11px] text-muted-foreground">
-                {payout.period_end}
-              </div>
-              <span className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase ${getPayoutBadgeClass(payout.status)}`}>
+              <div className="font-mono text-[11px] text-muted-foreground">{payout.period_end}</div>
+              <span
+                className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase ${getPayoutBadgeClass(payout.status)}`}
+              >
                 {payout.status}
               </span>
             </div>
@@ -772,7 +786,9 @@ function MasterPayoutCard({ accountId }: { accountId: string }) {
           />
         </label>
         <label className="mt-3 block">
-          <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Recipient name</span>
+          <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
+            Recipient name
+          </span>
           <input
             value={recipientName}
             onChange={(e) => setRecipientName(e.target.value)}
@@ -780,7 +796,9 @@ function MasterPayoutCard({ accountId }: { accountId: string }) {
           />
         </label>
         <label className="mt-3 block">
-          <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Recipient phone</span>
+          <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
+            Recipient phone
+          </span>
           <input
             value={recipientPhone}
             onChange={(e) => setRecipientPhone(e.target.value)}
@@ -795,7 +813,9 @@ function MasterPayoutCard({ accountId }: { accountId: string }) {
             Cancel
           </button>
           <button
-            disabled={submit.isPending || !amount || !recipientName.trim() || !recipientPhone.trim()}
+            disabled={
+              submit.isPending || !amount || !recipientName.trim() || !recipientPhone.trim()
+            }
             onClick={() => submit.mutate()}
             className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
           >
@@ -821,7 +841,6 @@ function getPayoutBadgeClass(status: AdminPayout["status"]): string {
 }
 
 /* ---------------- follower ---------------- */
-
 
 function FollowerSections({ accountId }: { accountId: string }) {
   return (
@@ -1138,8 +1157,8 @@ function TradesSection({ accountId }: { accountId: string }) {
       </div>
       {isLoading && (
         <PatientLoader
-          label="Pulling deals from MT5…"
-          slowLabel="The MT5 terminal is taking longer than usual to respond. This can happen when the terminal is busy — hang tight, it'll come through."
+          label="Pulling your trade history…"
+          slowLabel="This is taking longer than usual — the source is busy right now. Hang tight, it'll come through."
         />
       )}
       {error && <ErrorState message={(error as Error).message} onRetry={() => refetch()} />}

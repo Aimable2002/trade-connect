@@ -7,6 +7,7 @@ import {
   subscriptionsQueryOptions,
 } from "@/lib/queries";
 import { NumericValue } from "@/components/NumericValue";
+import { PlatformBadge } from "@/components/PlatformBadge";
 import { maxDrawdownAbs, netPnl, openExposure, winRate } from "@/lib/trades";
 import type { DirectoryMaster } from "@/lib/api";
 import { PatientLoader, ErrorState } from "@/components/DataState";
@@ -24,7 +25,7 @@ function MastersDirectory() {
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Directory</div>
         <h1 className="mt-1 text-2xl font-semibold">Masters</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Stats computed live from each master's MT5 deals. First load ~10s.
+          Stats computed live from each master's trade history. First load ~10s.
         </p>
       </header>
 
@@ -83,8 +84,11 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
           >
             {master.display_name}
           </Link>
-          <div className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">
-            {master.account_id}
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <span className="truncate font-mono text-[10px] text-muted-foreground">
+              {master.account_id}
+            </span>
+            <PlatformBadge platform={master.platform} />
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -152,9 +156,6 @@ function MasterCard({ master }: { master: DirectoryMaster }) {
         Followers: <span className="font-mono">{followers ?? "—"}</span>
       </div>
 
-
-
-
       <div className="mt-3 flex gap-2">
         <Link
           to="/insight/$accountId"
@@ -205,4 +206,3 @@ function Stat({
     </div>
   );
 }
-

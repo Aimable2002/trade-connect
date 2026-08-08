@@ -9,75 +9,45 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppSettingsRouteImport } from './routes/_app.settings'
-import { Route as AppPricingRouteImport } from './routes/_app.pricing'
-import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
-import { Route as AppMastersRouteImport } from './routes/_app.masters'
-import { Route as AppLeaderboardRouteImport } from './routes/_app.leaderboard'
-import { Route as AppHistoryRouteImport } from './routes/_app.history'
-import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
-import { Route as AppCheckoutRouteImport } from './routes/_app.checkout'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppChallengesRouteImport } from './routes/_app.challenges'
-import { Route as AppChallengesIndexRouteImport } from './routes/_app.challenges.index'
-import { Route as AppAdminIndexRouteImport } from './routes/_app.admin.index'
-import { Route as AppPaymentsReferenceRouteImport } from './routes/_app.payments.$reference'
-import { Route as AppInsightAccountIdRouteImport } from './routes/_app.insight.$accountId'
-import { Route as AppChallengesHistoryRouteImport } from './routes/_app.challenges.history'
-import { Route as AppAdminChallengesRouteImport } from './routes/_app.admin.challenges'
+import { Route as AppCheckoutRouteImport } from './routes/_app.checkout'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppHistoryRouteImport } from './routes/_app.history'
+import { Route as AppLeaderboardRouteImport } from './routes/_app.leaderboard'
+import { Route as AppMastersRouteImport } from './routes/_app.masters'
+import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
+import { Route as AppPricingRouteImport } from './routes/_app.pricing'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppAccountsAccountIdRouteImport } from './routes/_app.accounts.$accountId'
+import { Route as AppAdminIndexRouteImport } from './routes/_app.admin.index'
+import { Route as AppAdminChallengesRouteImport } from './routes/_app.admin.challenges'
+import { Route as AppChallengesIndexRouteImport } from './routes/_app.challenges.index'
+import { Route as AppChallengesHistoryRouteImport } from './routes/_app.challenges.history'
+import { Route as AppInsightAccountIdRouteImport } from './routes/_app.insight.$accountId'
+import { Route as AppPaymentsReferenceRouteImport } from './routes/_app.payments.$reference'
 import { Route as AppAdminMastersIndexRouteImport } from './routes/_app.admin.masters.index'
 import { Route as AppAdminMastersAccountIdRouteImport } from './routes/_app.admin.masters.$accountId'
 
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPricingRoute = AppPricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppOnboardingRoute = AppOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMastersRoute = AppMastersRouteImport.update({
-  id: '/masters',
-  path: '/masters',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLeaderboardRoute = AppLeaderboardRouteImport.update({
-  id: '/leaderboard',
-  path: '/leaderboard',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppHistoryRoute = AppHistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const AppChallengesRoute = AppChallengesRouteImport.update({
+  id: '/challenges',
+  path: '/challenges',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCheckoutRoute = AppCheckoutRouteImport.update({
@@ -85,9 +55,54 @@ const AppCheckoutRoute = AppCheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => AppRoute,
 } as any)
-const AppChallengesRoute = AppChallengesRouteImport.update({
-  id: '/challenges',
-  path: '/challenges',
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHistoryRoute = AppHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLeaderboardRoute = AppLeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMastersRoute = AppMastersRouteImport.update({
+  id: '/masters',
+  path: '/masters',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOnboardingRoute = AppOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPricingRoute = AppPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccountsAccountIdRoute = AppAccountsAccountIdRouteImport.update({
+  id: '/accounts/$accountId',
+  path: '/accounts/$accountId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminChallengesRoute = AppAdminChallengesRouteImport.update({
+  id: '/admin/challenges',
+  path: '/admin/challenges',
   getParentRoute: () => AppRoute,
 } as any)
 const AppChallengesIndexRoute = AppChallengesIndexRouteImport.update({
@@ -95,34 +110,19 @@ const AppChallengesIndexRoute = AppChallengesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppChallengesRoute,
 } as any)
-const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPaymentsReferenceRoute = AppPaymentsReferenceRouteImport.update({
-  id: '/payments/$reference',
-  path: '/payments/$reference',
-  getParentRoute: () => AppRoute,
+const AppChallengesHistoryRoute = AppChallengesHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AppChallengesRoute,
 } as any)
 const AppInsightAccountIdRoute = AppInsightAccountIdRouteImport.update({
   id: '/insight/$accountId',
   path: '/insight/$accountId',
   getParentRoute: () => AppRoute,
 } as any)
-const AppChallengesHistoryRoute = AppChallengesHistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => AppChallengesRoute,
-} as any)
-const AppAdminChallengesRoute = AppAdminChallengesRouteImport.update({
-  id: '/admin/challenges',
-  path: '/admin/challenges',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAccountsAccountIdRoute = AppAccountsAccountIdRouteImport.update({
-  id: '/accounts/$accountId',
-  path: '/accounts/$accountId',
+const AppPaymentsReferenceRoute = AppPaymentsReferenceRouteImport.update({
+  id: '/payments/$reference',
+  path: '/payments/$reference',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAdminMastersIndexRoute = AppAdminMastersIndexRouteImport.update({
@@ -281,11 +281,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -295,60 +295,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/settings': {
-      id: '/_app/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/pricing': {
-      id: '/_app/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof AppPricingRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/onboarding': {
-      id: '/_app/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof AppOnboardingRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/masters': {
-      id: '/_app/masters'
-      path: '/masters'
-      fullPath: '/masters'
-      preLoaderRoute: typeof AppMastersRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/leaderboard': {
-      id: '/_app/leaderboard'
-      path: '/leaderboard'
-      fullPath: '/leaderboard'
-      preLoaderRoute: typeof AppLeaderboardRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/history': {
-      id: '/_app/history'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof AppHistoryRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
+    '/_app/challenges': {
+      id: '/_app/challenges'
+      path: '/challenges'
+      fullPath: '/challenges'
+      preLoaderRoute: typeof AppChallengesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/checkout': {
@@ -358,11 +316,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCheckoutRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/challenges': {
-      id: '/_app/challenges'
-      path: '/challenges'
-      fullPath: '/challenges'
-      preLoaderRoute: typeof AppChallengesRouteImport
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/history': {
+      id: '/_app/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AppHistoryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/leaderboard': {
+      id: '/_app/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof AppLeaderboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/masters': {
+      id: '/_app/masters'
+      path: '/masters'
+      fullPath: '/masters'
+      preLoaderRoute: typeof AppMastersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/onboarding': {
+      id: '/_app/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AppOnboardingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/pricing': {
+      id: '/_app/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof AppPricingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/accounts/$accountId': {
+      id: '/_app/accounts/$accountId'
+      path: '/accounts/$accountId'
+      fullPath: '/accounts/$accountId'
+      preLoaderRoute: typeof AppAccountsAccountIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/': {
+      id: '/_app/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/challenges': {
+      id: '/_app/admin/challenges'
+      path: '/admin/challenges'
+      fullPath: '/admin/challenges'
+      preLoaderRoute: typeof AppAdminChallengesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/challenges/': {
@@ -372,19 +393,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChallengesIndexRouteImport
       parentRoute: typeof AppChallengesRoute
     }
-    '/_app/admin/': {
-      id: '/_app/admin/'
-      path: '/admin'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AppAdminIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/payments/$reference': {
-      id: '/_app/payments/$reference'
-      path: '/payments/$reference'
-      fullPath: '/payments/$reference'
-      preLoaderRoute: typeof AppPaymentsReferenceRouteImport
-      parentRoute: typeof AppRoute
+    '/_app/challenges/history': {
+      id: '/_app/challenges/history'
+      path: '/history'
+      fullPath: '/challenges/history'
+      preLoaderRoute: typeof AppChallengesHistoryRouteImport
+      parentRoute: typeof AppChallengesRoute
     }
     '/_app/insight/$accountId': {
       id: '/_app/insight/$accountId'
@@ -393,25 +407,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInsightAccountIdRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/challenges/history': {
-      id: '/_app/challenges/history'
-      path: '/history'
-      fullPath: '/challenges/history'
-      preLoaderRoute: typeof AppChallengesHistoryRouteImport
-      parentRoute: typeof AppChallengesRoute
-    }
-    '/_app/admin/challenges': {
-      id: '/_app/admin/challenges'
-      path: '/admin/challenges'
-      fullPath: '/admin/challenges'
-      preLoaderRoute: typeof AppAdminChallengesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/accounts/$accountId': {
-      id: '/_app/accounts/$accountId'
-      path: '/accounts/$accountId'
-      fullPath: '/accounts/$accountId'
-      preLoaderRoute: typeof AppAccountsAccountIdRouteImport
+    '/_app/payments/$reference': {
+      id: '/_app/payments/$reference'
+      path: '/payments/$reference'
+      fullPath: '/payments/$reference'
+      preLoaderRoute: typeof AppPaymentsReferenceRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/admin/masters/': {

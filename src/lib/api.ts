@@ -119,6 +119,26 @@ export async function provisionAccount(input: ProvisionInput): Promise<Provision
   });
 }
 
+// -------- cTrader master onboarding --------
+//
+// Unlike provisionAccount above, this doesn't provision anything itself - it
+// only gets a Spotware authorization_url. The caller must do a full-page
+// redirect (window.location.href = res.authorization_url), not treat this
+// like a normal mutation result, since the consent step happens on
+// Spotware's own hosted page, not in this app. See
+// copydesk_fanout/api/api_server.py's /accounts/ctrader/start and
+// /accounts/ctrader/callback for the backend side of this flow.
+
+export interface CtraderStartResponse {
+  authorization_url: string;
+}
+
+export async function startCtraderConnection(): Promise<CtraderStartResponse> {
+  return authedFetch<CtraderStartResponse>("/accounts/ctrader/start", {
+    method: "POST",
+  });
+}
+
 // -------- Account lifecycle --------
 
 export interface PauseResponse {
@@ -191,6 +211,7 @@ export interface DirectoryMaster {
   display_name: string;
   bio?: string;
   rate_percent?: number;
+  platform?: "mt5" | "ctrader";
 }
 
 export const getMastersDirectory = () =>
@@ -466,22 +487,22 @@ export const enrollInChallenge = (accountId: string, challenge_id: string) =>
   });
 
 export const leaveChallenge = (accountId: string, challengeId: string) =>
-  authedFetch<ChallengeEnrollment>(
-    `/masters/${accountId}/challenges/${challengeId}/leave`,
-    { method: "POST", timeoutMs: 20_000 },
-  );
+  authedFetch<ChallengeEnrollment>(`/masters/${accountId}/challenges/${challengeId}/leave`, {
+    method: "POST",
+    timeoutMs: 20_000,
+  });
 
 export const getChallengeStatus = (accountId: string) =>
-  authedFetch<ChallengeStatusResponse>(
-    `/masters/${accountId}/challenges/status`,
-    { method: "GET", timeoutMs: 15_000 },
-  );
+  authedFetch<ChallengeStatusResponse>(`/masters/${accountId}/challenges/status`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
 
 export const getChallengeHistory = (accountId: string) =>
-  authedFetch<ChallengeHistoryResponse>(
-    `/masters/${accountId}/challenges/history`,
-    { method: "GET", timeoutMs: 15_000 },
-  );
+  authedFetch<ChallengeHistoryResponse>(`/masters/${accountId}/challenges/history`, {
+    method: "GET",
+    timeoutMs: 15_000,
+  });
 
 // -------- Payments (Flutterwave, backend-handled) --------
 //
@@ -541,10 +562,7 @@ export const getPaymentCurrencies = () =>
     timeoutMs: 15_000,
   }).then((r) => r.currencies ?? []);
 
-export const quotePayment = (input: {
-  amount_usd: number;
-  currency: string;
-}) =>
+export const quotePayment = (input: { amount_usd: number; currency: string }) =>
   authedFetch<{ amount_usd: number; amount_charged: number; currency: string; rate: number }>(
     "/payments/quote",
     { method: "POST", body: input, timeoutMs: 15_000 },
@@ -656,6 +674,7 @@ export interface AdminMasterListItem {
   account_status: string;
   rate_percent: number | null;
   follower_count: number;
+  platform?: "mt5" | "ctrader";
 }
 
 export interface AdminMasterRate {

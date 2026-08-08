@@ -96,15 +96,14 @@ function Leaderboard() {
     return [...withData, ...withoutData];
   }, [rows]);
 
-
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-8">
       <header>
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Ranked</div>
         <h1 className="mt-1 text-2xl font-semibold">Leaderboard</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Ranked by all-time net P&L computed client-side from raw MT5 deals. First load per master
-          takes ~10s. Scroll horizontally on mobile.
+          Ranked by all-time net P&L computed client-side from raw trade history. First load per
+          master takes ~10s. Scroll horizontally on mobile.
         </p>
       </header>
 
@@ -239,4 +238,3 @@ function Cell({ row, children }: { row: Row; children: React.ReactNode }) {
 function Num({ children }: { children: React.ReactNode }) {
   return <td className="whitespace-nowrap px-3 py-3 text-right font-mono tabular">{children}</td>;
 }
-

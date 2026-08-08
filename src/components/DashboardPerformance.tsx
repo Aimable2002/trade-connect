@@ -101,10 +101,10 @@ export function DashboardPerformance({ accounts }: { accounts: AccountRow[] }) {
           )}
         </div>
 
-        {isLoading && <PatientLoader label="Pulling deals from MT5…" compact className="mt-2" />}
-        {!isLoading && firstError && (
-          <ErrorState className="mt-2" message={firstError.message} />
+        {isLoading && (
+          <PatientLoader label="Pulling your trade history…" compact className="mt-2" />
         )}
+        {!isLoading && firstError && <ErrorState className="mt-2" message={firstError.message} />}
         {!isLoading && !firstError && (!stats || stats.cum.length < 2) && (
           <div className="mt-2 text-xs text-muted-foreground">
             Not enough closed trades yet to chart performance.
@@ -197,7 +197,10 @@ export function DashboardPerformance({ accounts }: { accounts: AccountRow[] }) {
                 </div>
                 <div className="mt-2 h-40 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.symbols} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <BarChart
+                      data={stats.symbols}
+                      margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+                    >
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke="var(--border)"
@@ -292,9 +295,7 @@ export function DashboardPerformance({ accounts }: { accounts: AccountRow[] }) {
 
       {followers.length > 0 && (
         <div className="rounded-lg border border-border bg-card p-4">
-          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Copying
-          </div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Copying</div>
           <div className="mt-3 space-y-2">
             {followers.map((f) => (
               <CopyingRow key={f.account_id} accountId={f.account_id} />

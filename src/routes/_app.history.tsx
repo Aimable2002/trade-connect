@@ -26,7 +26,7 @@ function History() {
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Log</div>
         <h1 className="mt-1 text-2xl font-semibold">Trade history</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Live pull from the MT5 terminal — the first request per account takes about 10 seconds.
+          Live pull from the source account — the first request per account takes about 10 seconds.
         </p>
       </header>
 
@@ -63,8 +63,8 @@ function AccountTrades({ accountId }: { accountId: string }) {
   if (isLoading) {
     return (
       <PatientLoader
-        label="Pulling deals from MT5 terminal…"
-        slowLabel="Still pulling — the MT5 terminal can be slow to respond under load. This is normal; no need to refresh."
+        label="Pulling your trade history…"
+        slowLabel="Still pulling — the source can be slow to respond under load. This is normal; no need to refresh."
       />
     );
   }

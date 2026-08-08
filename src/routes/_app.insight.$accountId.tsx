@@ -19,6 +19,7 @@ import {
   masterTradesQueryOptions,
 } from "@/lib/queries";
 import { NumericValue } from "@/components/NumericValue";
+import { PlatformBadge } from "@/components/PlatformBadge";
 import { PatientLoader, ErrorState } from "@/components/DataState";
 import {
   avgLoss,
@@ -86,8 +87,8 @@ function Insight() {
 
       {isLoading && (
         <PatientLoader
-          label="Pulling deals from the MT5 terminal…"
-          slowLabel="Live master stats are computed straight from MT5 deal history, which can be slow to fetch when the terminal is busy. Hang tight — it'll finish."
+          label="Pulling this master's trade history…"
+          slowLabel="Live master stats are computed straight from their trade history, which can be slow to fetch when the source is busy. Hang tight — it'll finish."
         />
       )}
       {error && (
@@ -125,7 +126,7 @@ function HeroHeader({
   ratePercent,
 }: {
   accountId: string;
-  master: { display_name: string; bio?: string } | undefined;
+  master: { display_name: string; bio?: string; platform?: "mt5" | "ctrader" } | undefined;
   ratePercent: number | undefined;
 }) {
   return (
@@ -138,8 +139,11 @@ function HeroHeader({
           <h1 className="mt-1 text-2xl font-semibold md:text-3xl">
             {master?.display_name ?? accountId}
           </h1>
-          <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
-            {accountId}
+          <div className="mt-1 flex items-center gap-1.5">
+            <span className="truncate font-mono text-[11px] text-muted-foreground">
+              {accountId}
+            </span>
+            <PlatformBadge platform={master?.platform} />
           </div>
           {master?.bio && (
             <p className="mt-3 max-w-xl text-sm text-muted-foreground">{master.bio}</p>

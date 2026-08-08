@@ -22,10 +22,9 @@ export const getActiveAccountsQuery = (select = "*") =>
 
 export type AccountRole = "master" | "follower";
 export type AccountStatus = "live" | "offline" | "paused" | "pending" | string;
+export type AccountPlatform = "mt5" | "ctrader";
 export type SizingMode =
-  | "fixed_multiplier"
-  | "balance_proportional"
-  | "fixed_master_balance_percentage";
+  "fixed_multiplier" | "balance_proportional" | "fixed_master_balance_percentage";
 
 export interface AccountRow {
   account_id: string;
@@ -33,6 +32,10 @@ export interface AccountRow {
   status: AccountStatus;
   user_id?: string;
   created_at?: string;
+  // Absent on rows created before this column existed - treat missing as
+  // "mt5" everywhere, matching the DB column's own default (see
+  // copydesk_fanout/migrations/001_ctrader_support.sql).
+  platform?: AccountPlatform;
 }
 
 export interface SubscriptionRow {

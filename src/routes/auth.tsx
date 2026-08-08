@@ -76,7 +76,7 @@ function AuthPage() {
         </div>
         <div className="space-y-4">
           <h1 className="max-w-md text-3xl font-semibold leading-tight">
-            A precision terminal for copy-trading MetaTrader 5.
+            A precision terminal for copy-trading, from MT5 or cTrader.
           </h1>
           <p className="max-w-md text-sm text-muted-foreground">
             Route trades from vetted masters into your own broker account in real time. Full
@@ -115,7 +115,7 @@ function AuthPage() {
             <p className="mt-1 text-xs text-muted-foreground">
               {mode === "signin"
                 ? "Enter your credentials to access the terminal."
-                : "Set up an account to connect your MT5 trading login."}
+                : "Set up an account to connect your MT5 or cTrader trading login."}
             </p>
           </div>
 

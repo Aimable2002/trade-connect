@@ -120,15 +120,15 @@ function Hero() {
       <div className="grid items-center gap-10 md:grid-cols-2">
         <div>
           <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[10px] uppercase tracking-widest text-muted-foreground">
-            <Sparkles className="h-3 w-3 text-primary" /> MT5 copy trading, done right
+            <Sparkles className="h-3 w-3 text-primary" /> Copy trading, done right
           </div>
           <h1 className="mt-4 text-3xl font-semibold leading-tight md:text-5xl">
-            Copy live MT5 trades from vetted masters — in real time, on your own broker account.
+            Copy live trades from vetted masters — in real time, on your own MT5 broker account.
           </h1>
           <p className="mt-4 max-w-lg text-sm text-muted-foreground md:text-base">
-            CopyDesk mirrors a master's fills into your MetaTrader 5 account as they happen. Full
-            transparency on balance, equity, and open positions — you always control your own broker
-            login.
+            CopyDesk mirrors a master's fills into your MetaTrader 5 account as they happen —
+            whether the master runs on MT5 or cTrader. Full transparency on balance, equity, and
+            open positions — you always control your own broker login.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
@@ -324,7 +324,9 @@ function Brokers() {
         />
         <p className="mx-auto mt-3 max-w-xl text-center text-xs text-muted-foreground">
           CopyDesk provisions its own MetaTrader 5 terminal against your login, so broker support is
-          simply "does it offer MT5". These are the ones our users run most often.
+          simply "does it offer MT5". These are the ones our users run most often. (Running a
+          strategy on cTrader instead? Masters can connect a cTrader account too — followers still
+          copy into MT5.)
         </p>
         <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3 lg:grid-cols-4">
           {BROKERS.map((b) => (
@@ -352,7 +354,7 @@ function HowItWorks() {
     {
       icon: Users,
       title: "Pick a master",
-      body: "Browse the directory, compare live P&L, drawdown, win rate, and track record — all computed straight from raw MT5 deal history.",
+      body: "Browse the directory, compare live P&L, drawdown, win rate, and track record — all computed straight from raw trade history.",
     },
     {
       icon: Cable,
@@ -398,7 +400,7 @@ function Features() {
     {
       icon: ShieldCheck,
       title: "You keep your broker login",
-      body: "No pooled custody. Your credentials provision your own isolated MT5 terminal instance.",
+      body: "No pooled custody. Followers get their own isolated MT5 terminal instance; masters connecting via cTrader grant read-only access — we never see your password.",
     },
     {
       icon: Wallet,
@@ -583,7 +585,8 @@ function FinalCta() {
       <div className="mx-auto max-w-3xl px-4 py-16 text-center md:px-8 md:py-20">
         <h2 className="text-2xl font-semibold md:text-3xl">Ready to stop watching charts alone?</h2>
         <p className="mt-3 text-sm text-muted-foreground">
-          Connect an MT5 account and start copying — or list your own strategy as a master.
+          Connect an MT5 account and start copying — or list your own strategy as a master, on MT5
+          or cTrader.
         </p>
         <Link
           to="/auth"
